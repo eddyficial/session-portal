@@ -11,6 +11,13 @@ Session Portal is a local CustomTkinter desktop app for browsing, previewing, re
 
 ## Run
 
+Clone the repo and run commands from the repo root:
+
+```powershell
+git clone https://github.com/eddyficial/session-portal.git
+cd session-portal
+```
+
 ```powershell
 pyw .\Codebase\session_portal.pyw
 ```

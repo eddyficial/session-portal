@@ -15,6 +15,13 @@ Onboarding also checks for other common local AI tools, such as Cursor, Windsurf
 
 ## Install
 
+Clone the repo and run commands from the repo root:
+
+```powershell
+git clone https://github.com/eddyficial/session-portal.git
+cd session-portal
+```
+
 ```powershell
 py -3 -m pip install -r .\Codebase\requirements.txt
 ```

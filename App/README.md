@@ -4,7 +4,14 @@ Session Portal is a local Windows desktop app for finding, previewing, renaming,
 
 ## Launch
 
-Use the no-console launcher from the repository root:
+Clone the repo and run commands from the repository root:
+
+```powershell
+git clone https://github.com/eddyficial/session-portal.git
+cd session-portal
+```
+
+Use the no-console launcher:
 
 ```powershell
 pyw .\Codebase\session_portal.pyw
