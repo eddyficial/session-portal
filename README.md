@@ -1,5 +1,7 @@
 # Session Portal
 
+[![Tests](https://github.com/eddyficial/session-portal/actions/workflows/tests.yml/badge.svg)](https://github.com/eddyficial/session-portal/actions/workflows/tests.yml)
+
 Session Portal is a local Windows desktop app for finding, previewing, exporting, cleaning, and resuming AI CLI sessions from one place.
 
 It scans the current user's local workspace for supported AI coding tools, shows only resumable sessions, and opens selected sessions back in their recorded working folder.
@@ -353,7 +355,20 @@ SECURITY.md                  Security policy
 
 ### Development
 
-Run tests from the repo root:
+Session Portal includes a visible GitHub Actions test check for every push to `main`, every push to `features`, and every pull request into `main`.
+
+The public test suite covers:
+
+- Provider parsing and bounded file reads
+- Resume command construction
+- Delete, Trash, and restore safety
+- Hidden session handling for providers such as AMP
+- Thread viewing and transcript export
+- Search index behavior
+- Cost calculation helpers
+- Inspector formatting
+
+Run the same tests locally from the repo root:
 
 ```powershell
 py -3 -m pytest Codebase\v2\tests -q
