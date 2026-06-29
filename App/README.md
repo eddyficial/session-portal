@@ -6,9 +6,9 @@ For install steps, screenshots, usage, update, uninstall, and security notes, us
 
 ### Assets
 
-- `assets/session-portal-all-models.png`
-- `assets/session-portal-provider-filter.png`
-- `assets/session-portal-thread-view.png`
-- `assets/session-portal-resume-terminal.png`
+- `assets/claude-code-flow-all-models.png`
+- `assets/claude-code-flow-provider-filter.png`
+- `assets/claude-code-flow-thread-view.png`
+- `assets/claude-code-flow-resume-terminal.png`
 
 The screenshots use synthetic demo data. They do not show real user paths, project names, prompts, or session IDs.

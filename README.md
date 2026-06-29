@@ -171,25 +171,25 @@ These screenshots use a synthetic Claude Code demo flow. They do not show real u
 
 #### All Models
 
-![Session Portal all models view](App/assets/session-portal-all-models.png)
+![Session Portal all models view](App/assets/claude-code-flow-all-models.png)
 
 Shows the combined resumable session list across enabled providers. The sidebar filters by provider, the table shows session metadata, and the inspector previews the selected row.
 
 #### Provider Filter
 
-![Session Portal provider filter view](App/assets/session-portal-provider-filter.png)
+![Session Portal provider filter view](App/assets/claude-code-flow-provider-filter.png)
 
 Shows the same table narrowed to Claude Code. Provider filters make it easier to review one tool at a time.
 
 #### View Thread
 
-![Session Portal thread viewer](App/assets/session-portal-thread-view.png)
+![Session Portal thread viewer](App/assets/claude-code-flow-thread-view.png)
 
 Opens a read-only Claude Code transcript window so users can inspect a longer conversation before resuming or exporting it.
 
 #### Resume Terminal
 
-![Session Portal resumed terminal](App/assets/session-portal-resume-terminal.png)
+![Session Portal resumed terminal](App/assets/claude-code-flow-resume-terminal.png)
 
 Shows the expected resume behavior with Claude Code: Session Portal opens the matching CLI in the recorded working folder.
 
