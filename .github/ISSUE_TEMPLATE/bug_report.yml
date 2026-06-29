@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible Session Portal bug.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please do not paste secrets, API keys, private session contents, or private file paths.
+  - type: input
+    id: version
+    attributes:
+      label: Session Portal version or branch
+      placeholder: "main, features, commit hash, or release tag"
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the visible behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Session Portal
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider involved
+      options:
+        - Not provider-specific
+        - AMP
+        - Claude Code
+        - Codex
+        - Copilot
+        - Grok
+        - Other
+  - type: textarea
+    id: safe_logs
+    attributes:
+      label: Safe logs or screenshots
+      description: Redact usernames, private paths, tokens, and private conversation contents before posting.

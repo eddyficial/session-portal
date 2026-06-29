@@ -1,0 +1,79 @@
+name: Guarded Auto-Fix
+
+on:
+  issues:
+    types:
+      - labeled
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to prepare a guarded auto-fix PR for"
+        required: true
+      issue_title:
+        description: "Short issue title for manual runs"
+        required: false
+      issue_url:
+        description: "Issue URL for manual runs"
+        required: false
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+
+jobs:
+  prepare-auto-fix-pr:
+    name: Prepare guarded draft PR
+    runs-on: windows-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'auto-fix'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install test dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r Codebase\requirements.txt pytest
+
+      - name: Create guarded handoff
+        shell: pwsh
+        env:
+          ISSUE_NUMBER: ${{ github.event.inputs.issue_number }}
+          ISSUE_TITLE: ${{ github.event.inputs.issue_title }}
+          ISSUE_URL: ${{ github.event.inputs.issue_url }}
+          ISSUE_AUTHOR: ${{ github.actor }}
+        run: python .github\scripts\create_auto_fix_handoff.py
+
+      - name: Run tests
+        shell: pwsh
+        run: python -m pytest Codebase\v2\tests -q
+
+      - name: Create branch and commit
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$env:AUTO_FIX_BRANCH"
+          git add "$env:AUTO_FIX_FILE"
+          git commit -m "Prepare guarded auto-fix for issue #$env:AUTO_FIX_ISSUE_NUMBER"
+          git push --force-with-lease origin "$env:AUTO_FIX_BRANCH"
+
+      - name: Open draft pull request
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create `
+            --draft `
+            --base main `
+            --head "$env:AUTO_FIX_BRANCH" `
+            --title "Auto-fix guardrail: issue #$env:AUTO_FIX_ISSUE_NUMBER" `
+            --body "Created from issue #$env:AUTO_FIX_ISSUE_NUMBER after the auto-fix label was applied.`n`nThis draft PR contains the guarded handoff and test evidence only. Maintainers must review any actual fix before merge."

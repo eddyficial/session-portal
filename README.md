@@ -327,6 +327,31 @@ Provider failures are isolated and logged so one broken provider or corrupt sess
 
 AMP is intentionally optimized for normal browsing: refresh, preview, and search use `amp threads list --json` metadata. Session Portal only calls `amp threads markdown <id>` when the user opens **View Thread** or **Export Thread** for one selected AMP thread.
 
+## Guarded Auto-Fix Workflow
+
+Session Portal includes a conservative GitHub issue automation path.
+
+Use it like this:
+
+1. Open or review a GitHub issue.
+2. Confirm the issue is safe and reproducible.
+3. Add the `auto-fix` label only when automation is allowed.
+4. GitHub Actions creates a branch named `auto/issue-<number>`.
+5. The workflow writes a guarded handoff file under `.github/auto-fix/`.
+6. The workflow runs the test suite.
+7. The workflow opens a draft pull request.
+8. A maintainer reviews the PR before merge.
+
+Guardrails:
+
+- The workflow never pushes directly to `main`.
+- The workflow only runs from an explicit `auto-fix` label or manual workflow dispatch.
+- Issue text is treated as untrusted input.
+- Raw commands from issue text must not be executed.
+- Automation changes must stay inside this repository.
+- Tests must pass before the generated PR is ready for review.
+- Any future AI/API token must live in GitHub Secrets, never in the repo.
+
 ## Security
 
 See [SECURITY.md](SECURITY.md).

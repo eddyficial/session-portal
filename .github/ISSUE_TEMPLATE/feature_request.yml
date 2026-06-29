@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a Session Portal improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please keep requests concrete. Do not include private session contents or secrets.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should Session Portal do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Provider support
+        - Session list
+        - Inspector
+        - Resume flow
+        - Export flow
+        - Trash/delete flow
+        - Install/update
+        - Documentation
+        - Other
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Add examples or screenshots if useful. Redact private data.

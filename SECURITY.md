@@ -10,6 +10,10 @@ Please report security issues by opening a private GitHub security advisory when
 
 Do not publish exploit details publicly until the issue has been reviewed.
 
+## Automation Safety
+
+The `auto-fix` issue label is an explicit maintainer opt-in. Automation must treat issue text as untrusted input, must not execute commands copied from issues, must keep changes inside this repository, and must open a pull request for human review instead of pushing directly to `main`.
+
 ## Local Data Notice
 
 Session Portal reads local AI session files from the current user's machine. It does not require an API service and does not intentionally upload session data anywhere.
