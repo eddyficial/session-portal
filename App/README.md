@@ -25,6 +25,12 @@ If the UI dependency is missing:
 py -3 -m pip install -r .\Codebase\requirements.txt
 ```
 
+Optional desktop shortcut:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
+```
+
 ## What It Shows
 
 - Claude sessions from `%USERPROFILE%\.claude`

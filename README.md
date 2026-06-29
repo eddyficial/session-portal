@@ -32,6 +32,12 @@ C:\Users\<your-username>\session-portal
 py -3 -m pip install -r .\Codebase\requirements.txt
 ```
 
+Optional: create a desktop shortcut for easier future launches:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
+```
+
 ## Run
 
 Use the no-console launcher:
