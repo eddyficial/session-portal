@@ -167,7 +167,7 @@ Click a row to inspect it. Double-click a row or press `Enter` to resume it.
 
 ### Screen Walkthrough
 
-These screenshots use synthetic demo data. They do not show real user paths, project names, prompts, or session IDs.
+These screenshots use a synthetic Claude Code demo flow. They do not show real user paths, project names, prompts, or session IDs.
 
 #### All Models
 
@@ -179,13 +179,13 @@ Shows the combined resumable session list across enabled providers. The sidebar 
 
 ![Session Portal provider filter view](App/assets/session-portal-provider-filter.png)
 
-Shows the same table narrowed to one provider. Provider filters make it easier to review only AMP, Claude Code, Codex, Copilot, Grok, or all models.
+Shows the same table narrowed to Claude Code. Provider filters make it easier to review one tool at a time.
 
 #### View Thread
 
 ![Session Portal thread viewer](App/assets/session-portal-thread-view.png)
 
-Opens a read-only transcript window so users can inspect a longer conversation before resuming or exporting it.
+Opens a read-only Claude Code transcript window so users can inspect a longer conversation before resuming or exporting it.
 
 #### Resume Terminal
 
