@@ -45,6 +45,7 @@ AUDIT_DIR = _V2_DIR / "audits"
 ASSETS_DIR = _V2_DIR / "assets"
 APP_ICON = ASSETS_DIR / "session_portal.ico"
 APP_ICON_PNG = ASSETS_DIR / "logo_256.png"
+LOG_FILE = _V2_DIR / "session_portal.log"
 
 # ── Bounded-read safety constants ───────────────────────────────────────────
 CREATE_NO_WINDOW = getattr(__import__("subprocess"), "CREATE_NO_WINDOW", 0)

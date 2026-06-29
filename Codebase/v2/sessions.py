@@ -6,10 +6,13 @@ v1's :func:`load_sessions` behavior.
 """
 from __future__ import annotations
 
+from .logging_setup import get_logger
 from .models import Preview, Session
 from .providers.base import session_model_label
 from .providers.registry import PROVIDERS, get_provider
 from .storage import load_renames, load_settings
+
+logger = get_logger(__name__)
 
 
 def load_sessions(settings: dict | None = None) -> list[Session]:
@@ -19,7 +22,12 @@ def load_sessions(settings: dict | None = None) -> list[Session]:
     for provider in PROVIDERS:
         enabled = providers_cfg.get(provider.key, provider.detected())
         if enabled:
-            sessions.extend(provider.load_sessions())
+            # Providers are independent adapters. A bad provider store or
+            # missing CLI should be visible in logs without blanking the app.
+            try:
+                sessions.extend(provider.load_sessions())
+            except Exception:
+                logger.exception("Provider %s failed while loading sessions", provider.key)
 
     renames = load_renames()
     for s in sessions:
@@ -35,7 +43,11 @@ def get_session_preview(session: Session) -> Preview:
     provider = get_provider(session.provider)
     if provider is None:
         return Preview()
-    preview = provider.preview(session)
+    try:
+        preview = provider.preview(session)
+    except Exception:
+        logger.exception("Provider %s failed while previewing session %s", session.provider, session.id)
+        return Preview()
     # Cache tokens so cost can be computed without re-reading the file.
     session.tokens = preview.tokens
     return preview
@@ -49,6 +61,7 @@ def get_session_message_count(session: Session) -> int:
         preview = provider.preview(session) if provider is not None else Preview()
         count = preview.message_count
     except Exception:
+        logger.exception("Failed to count messages for session %s", session.id)
         count = 0
     session.message_count = count
     return count
@@ -72,6 +85,7 @@ def ensure_search_index(sessions: list[Session]) -> int:
         try:
             texts = provider.collect_messages(s)
         except Exception:
+            logger.exception("Provider %s failed while indexing session %s", s.provider, s.id)
             texts = []
         blob = " \n ".join(texts).lower()
         # Always include project + display so the prefilter still works through

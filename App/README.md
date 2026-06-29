@@ -84,6 +84,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Search sessions by project, title, or prompt; the empty search box prompts users to start typing to prefilter rows
 - Filter sessions by activity date range with the compact Dates calendar button
 - Filter by All Models, Claude Code, Codex, Grok, Copilot, or AMP
+- Provider filters are listed alphabetically after **All Models**
 - Toggle Auto Scan to keep supported session discovery fresh while the app is open
 - Reopen provider selection later with the Scan Sources button
 - Sort by date, LLM, project, or prompt/title from the sort menu or by clicking table headers
@@ -101,8 +102,10 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Resume AMP sessions with `amp threads continue <thread-id>`
 - Rename sessions locally
 - Delete selected sessions
+- Right-click a row to rename, delete that session, or enter delete mode for all currently shown rows
 - Clean currently shown empty sessions with **Clean Empty Msgs** after confirmation
 - Move deleted sessions into a recoverable Trash before permanent purge
+- Restore trashed sessions, delete selected trashed sessions forever, or empty the whole Trash
 - Compute approximate local cost estimates only when requested with **Compute Costs**
 
 ## Use Flow
@@ -120,6 +123,8 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 11. Use Esc or Cancel to leave delete mode without deleting.
 12. Use **Clean Empty Msgs** to remove currently shown sessions with no useful human messages after confirmation.
 13. Use **Export Thread** to open a Save As dialog, choose where the Markdown export should go, and confirm the filename.
+14. Use **Trash** to restore deleted sessions or permanently remove trashed sessions.
+15. Use `R` to refresh, `Q` to quit, and `Esc` to leave delete mode.
 
 ## Rename And Resume
 
@@ -139,6 +144,28 @@ To resume a session:
 3. Click the green provider-specific resume button, such as **Resume Claude Code**, **Resume Codex**, **Resume Grok**, **Resume Copilot**, or **Resume AMP**.
 
 The app opens a maximized terminal in the session's recorded working directory and runs the provider resume command. Double-clicking a row or pressing `Enter` also resumes the selected terminal chat session.
+
+## Delete And Trash
+
+To delete sessions:
+
+1. Select one row and click **Delete**, or right-click a row and choose **Delete This Session**.
+2. In delete mode, click rows to mark or unmark them.
+3. Use **Select All** to mark every currently shown row, or **Deselect All** to clear the marks.
+4. Click **Delete Selected**.
+5. Confirm the warning dialog.
+
+Deleted sessions go to Session Portal's local Trash when the provider stores local files that can be moved safely. Open **Trash** from the sidebar to restore selected sessions, delete selected trashed sessions forever, or empty the whole Trash. Permanent delete actions cannot be undone.
+
+AMP is different: AMP threads are server-backed, and `amp threads delete` is permanent on the AMP server. For that reason, the normal recoverable **Delete** action is disabled for AMP rows.
+
+To clean empty sessions:
+
+1. Apply any provider, search, or date filters you want.
+2. Click **Clean Empty**.
+3. Confirm the dialog.
+
+Only currently shown sessions with `0` useful human messages are moved to Trash.
 
 ## Export Thread
 
@@ -167,6 +194,12 @@ Most important controls have hover help:
 - The session table explains row selection and sortable columns.
 - The inspector and action buttons explain preview, rename, thread viewing, export, delete, and resume behavior.
 
+## Dates And Sorting
+
+Click **Dates** to open the calendar date-range picker. Use **Select** beside **From** or **To**, choose a date from the calendar, then click **Done**. Use **Clear Dates** to remove the date filter and return to all dates.
+
+The sort menu supports newest, oldest, LLM A-Z/Z-A, project A-Z/Z-A, prompt A-Z/Z-A, and message count low-high/high-low. Table headers also toggle sorting for the visible columns.
+
 Auto Scan refreshes provider/session discovery every 60 seconds by default. The sidebar toggle can turn it off when the user wants only manual Refresh behavior. Manual Refresh is used when the user wants new sessions, renamed rows, deleted rows, or changed provider choices to appear immediately.
 
 ## Codebase
@@ -187,6 +220,9 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - Saved provider choices: `Codebase/v2/settings.json`
 - Custom names file: `Codebase/v2/renames.json`
 - Default audit export folder: `Codebase/v2/audits`
+- Error log: `Codebase/v2/session_portal.log`
+
+The error log is local to the user's install and is ignored by git. It rotates automatically and records startup crashes, provider scan failures, failed CLI calls, resume failures, export failures, rename-save failures, and trash/restore problems. If a user reports a bug, ask them to check this file first.
 
 ## Current Notes
 
@@ -216,6 +252,7 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - Provider discovery is dynamic for the current Windows user and resolves local session folders from `%USERPROFILE%`.
 - Auto Scan reruns provider/session discovery every 60 seconds by default and can be toggled from the sidebar.
 - Session scanning uses bounded metadata reads so large JSONL histories do not stay in memory during refresh.
+- Provider failures are isolated and logged. One broken provider, corrupt session file, or missing CLI should not stop the rest of the app from loading.
 - Sidebar filters are generated from enabled/detected supported providers instead of a fixed source list.
 - Other common local AI tools are detected during onboarding, but only providers with session loaders appear in the resumable session list.
 - AMP support uses AMP's own CLI for thread listing, Markdown preview/export content, and resume commands. AMP delete is intentionally not wired to Session Portal trash because `amp threads delete` permanently deletes server-backed threads.

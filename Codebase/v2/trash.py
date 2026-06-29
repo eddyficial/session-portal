@@ -23,9 +23,11 @@ from .config import (
     PROJECTS_DIR,
     TRASH_DIR,
 )
+from .logging_setup import get_logger
 from .models import Session
 
 MANIFEST_FILE = TRASH_DIR / "manifest.json"
+logger = get_logger(__name__)
 
 ALLOWED_RESTORE_ROOTS = {
     "claude": [PROJECTS_DIR, CLAUDE_DIR],
@@ -67,7 +69,7 @@ def _load_manifest() -> list[dict]:
             if isinstance(data, list):
                 return data
         except Exception:
-            pass
+            logger.exception("Failed to read trash manifest from %s", MANIFEST_FILE)
     return []
 
 
@@ -108,6 +110,7 @@ def trash_session(session: Session) -> dict | None:
     try:
         shutil.move(str(original), str(target))
     except OSError:
+        logger.exception("Failed to move session %s to trash", session.id)
         return None
 
     entry = {
@@ -140,6 +143,7 @@ def restore_session(trash_id: str) -> bool:
     trashed = Path(entry["trashed_path"])
     original = Path(entry["original_path"])
     if not _is_safe_trash_path(trashed) or not _is_safe_restore_path(provider, original):
+        logger.warning("Rejected unsafe trash restore path for session %s", trash_id)
         return False
     if not trashed.exists():
         # Already gone; just drop the manifest entry.
@@ -153,6 +157,7 @@ def restore_session(trash_id: str) -> bool:
             original = original.with_name(original.name + ".restored")
         shutil.move(str(trashed), str(original))
     except OSError:
+        logger.exception("Failed to restore trashed session %s", trash_id)
         return False
     # Clean up the now-empty trash/<provider>/<id> folder if empty.
     try:
@@ -170,6 +175,7 @@ def purge_session(trash_id: str) -> bool:
         return False
     trashed = Path(entry["trashed_path"])
     if not _is_safe_trash_path(trashed):
+        logger.warning("Rejected unsafe trash purge path for session %s", trash_id)
         return False
     if trashed.exists():
         try:
@@ -178,7 +184,7 @@ def purge_session(trash_id: str) -> bool:
             else:
                 trashed.unlink(missing_ok=True)
         except OSError:
-            pass
+            logger.exception("Failed to purge trashed session %s", trash_id)
     try:
         trashed.parent.rmdir()
     except OSError:
@@ -193,6 +199,7 @@ def empty_trash() -> int:
     for entry in entries:
         trashed = Path(entry.get("trashed_path", ""))
         if not _is_safe_trash_path(trashed):
+            logger.warning("Skipped unsafe trash path during empty_trash: %s", trashed)
             continue
         if trashed.exists():
             try:
@@ -201,6 +208,6 @@ def empty_trash() -> int:
                 else:
                     trashed.unlink(missing_ok=True)
             except OSError:
-                pass
+                logger.exception("Failed to empty trashed item %s", trashed)
     _save_manifest([])
     return count

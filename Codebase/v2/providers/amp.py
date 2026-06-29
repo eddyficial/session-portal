@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from ..config import AMP_DATA_DIR, AMP_DIR, AMP_LOCALAPPDATA_DIR, CREATE_NO_WINDOW
+from ..logging_setup import get_logger
 from ..models import Preview, ResumeCommand, Session, ThreadMessage
 from ..resume import find_amp_exe, ps_single_quote
 from .base import (
@@ -26,9 +27,11 @@ from .base import (
 
 AMP_LIST_LIMIT = 500
 AMP_TIMEOUT_SECONDS = 15
+logger = get_logger(__name__)
 
 
 def _run_amp(args: list[str], timeout: int = AMP_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+    """Run an AMP CLI command used for server-backed thread data."""
     return subprocess.run(
         ["amp", *args],
         capture_output=True,
@@ -117,8 +120,10 @@ class AmpProvider:
         try:
             proc = _run_amp(["threads", "markdown", sid], timeout=30)
         except (OSError, subprocess.SubprocessError):
+            logger.exception("AMP markdown command failed for thread %s", sid)
             return ""
         if proc.returncode != 0:
+            logger.warning("AMP markdown command returned %s for thread %s: %s", proc.returncode, sid, proc.stderr)
             return ""
         return proc.stdout or ""
 
@@ -126,12 +131,15 @@ class AmpProvider:
         try:
             proc = _run_amp(["threads", "list", "--json", "--limit", str(AMP_LIST_LIMIT)])
         except (OSError, subprocess.SubprocessError):
+            logger.exception("AMP thread list command failed")
             return []
         if proc.returncode != 0:
+            logger.warning("AMP thread list returned %s: %s", proc.returncode, proc.stderr)
             return []
         try:
             rows = json.loads(proc.stdout)
         except json.JSONDecodeError:
+            logger.exception("AMP thread list returned invalid JSON")
             return []
         if not isinstance(rows, list):
             return []

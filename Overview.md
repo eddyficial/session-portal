@@ -68,6 +68,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - AMP CLI threads: detected from `%USERPROFILE%\.amp`, `%USERPROFILE%\.config\amp`, `%USERPROFILE%\.local\share\amp`, `%LOCALAPPDATA%\amp`, and loaded through `amp threads list --json`
 - Provider choices: `Codebase/v2/settings.json`
 - Custom display names: `Codebase/v2/renames.json`
+- Error log: `Codebase/v2/session_portal.log`
 
 ## Behavior Notes
 
@@ -77,6 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Basic use flow is documented in the public README: launch, choose providers, search/filter/sort, inspect, resume, rename, delete, refresh, and toggle Auto Scan.
 - Public README now explains rename and resume step by step: select a row, confirm inspector metadata, use **Rename** for local display names, or use the green provider-specific resume button/double-click/Enter to reopen the terminal chat session.
 - Delete mode requires explicit row selection plus a confirmation dialog; Esc or Cancel exits without deleting.
+- The public README now explains right-click row actions, delete-mode Select All/Deselect All, Trash restore/delete forever/empty trash, keyboard shortcuts, Clear Dates, sort choices, and why AMP rows do not use the recoverable local delete flow.
 - The `Msgs` column shows useful human message counts and can be sorted from the header or sort menu.
 - **Clean Empty Msgs** deletes only currently shown 0-message sessions after confirmation, respecting active search, provider, and date filters.
 - Non-resumable rows are excluded, including cleaned-up history-only records and missing session files.
@@ -121,6 +123,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - On 2026-06-29, the `features` Git branch was created and pushed for V2 feature work.
 - V2 is now the default app on the promotion branch.
 - V2 is the preferred engineering direction because it separates providers, session aggregation, storage, resume launch behavior, trash/recovery, thread viewing, cost estimates, and UI modules.
+- V2 now includes rotating local error logging for startup crashes, provider scan failures, CLI-backed provider failures, preview/indexing failures, resume errors, export failures, rename-save failures, and trash/restore problems. Logs are ignored by git and are meant for developer support/debugging, not user-facing app data.
 - The V2 provider layer is the desired foundation for Claude Code, Codex, Grok, Copilot, AMP, and future local AI tools, instead of continuing to expand one large `session_portal.py` file.
 - V1 remains archived at `Codebase/legacy/session_portal_v1.py` as a temporary rollback reference.
 - Current V2 tests pass locally: provider parsing, bounded reads, delete safety, resume-command construction, search indexing, trash/recovery, thread viewing, and cost estimates.

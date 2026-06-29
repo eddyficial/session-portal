@@ -24,6 +24,7 @@ from ..config import (
     provider_key_for_label,
     provider_label,
 )
+from ..logging_setup import get_logger
 from ..models import Session
 from ..pricing import session_cost as _session_cost, total_cost as _total_cost
 from ..providers.base import session_model_label
@@ -38,6 +39,8 @@ from ..sessions import (
 from ..storage import load_renames, load_settings, save_renames, save_settings
 from . import date_picker, inspector, onboarding, sidebar, table
 from .tooltips import add_tooltip
+
+logger = get_logger(__name__)
 
 
 def compact_number(value: int) -> str:
@@ -197,7 +200,8 @@ class SessionPortalApp:
         labels = ["All Models"]
         enabled = self.settings.get("providers", {})
         session_sources = {s.provider for s in self.all_sessions}
-        for key, info in PROVIDER_OPTIONS.items():
+        provider_items = sorted(PROVIDER_OPTIONS.items(), key=lambda item: item[1]["label"].lower())
+        for key, info in provider_items:
             if key in session_sources or (enabled.get(key, True) and provider_detected(key)):
                 labels.append(info["label"])
         return labels
@@ -437,6 +441,8 @@ class SessionPortalApp:
                 self._load_data()
                 if selected and selected in self.tree.get_children():
                     self.tree.selection_set(selected)
+        except Exception:
+            logger.exception("Auto-scan refresh failed")
         finally:
             self._schedule_auto_scan()
 
@@ -532,7 +538,8 @@ class SessionPortalApp:
         total = len(self.all_sessions)
         shown = len(self.filtered_sessions)
         counts = []
-        for key, info in PROVIDER_OPTIONS.items():
+        provider_items = sorted(PROVIDER_OPTIONS.items(), key=lambda item: item[1]["label"].lower())
+        for key, info in provider_items:
             count = sum(1 for s in self.filtered_sessions if s.provider == key)
             if count:
                 counts.append(f"{info['label']} {count}")
@@ -555,7 +562,7 @@ class SessionPortalApp:
                 try:
                     get_session_preview(s)
                 except Exception:
-                    pass
+                    logger.exception("Failed to compute cost data for session %s", s.id)
         self._apply_filter()
 
     def _refresh_list(self):
@@ -585,7 +592,7 @@ class SessionPortalApp:
             model_label = session_model_label(s)
             check = "x" if s.id in self._checked_ids else ""
             self.tree.insert("", tk.END, iid=s.id,
-                             values=(check, row_num, model_label, project_short, date_str, message_count, display),
+                             values=(check, f"{row_num}.", model_label, project_short, date_str, message_count, display),
                              tags=tag)
 
     # ── selection / preview / resume ────────────────────────────────────────
@@ -653,6 +660,7 @@ class SessionPortalApp:
                 return
             path = export_session_audit(session, export_path=Path(target))
         except Exception as exc:
+            logger.exception("Thread export failed for session %s", session.id)
             messagebox.showerror("Audit export failed", str(exc))
             return
         messagebox.showinfo("Thread exported", f"Saved thread export:\n\n{path}")
@@ -733,6 +741,7 @@ class SessionPortalApp:
         try:
             launch_resume(provider.resume_command(session))
         except Exception as exc:
+            logger.exception("Resume failed for session %s", session.id)
             messagebox.showerror("Action failed", str(exc))
 
     # ── tree interactions ───────────────────────────────────────────────────
@@ -792,7 +801,12 @@ class SessionPortalApp:
             renames[sid] = new_name
         else:
             renames.pop(sid, None)
-        save_renames(renames)
+        try:
+            save_renames(renames)
+        except Exception as exc:
+            logger.exception("Rename save failed for session %s", sid)
+            messagebox.showerror("Rename failed", str(exc))
+            return
         session.display = new_name or current
         self._refresh_list()
         self.tree.selection_set(sid)
@@ -861,7 +875,9 @@ class SessionPortalApp:
         from .. import trash
         renames = load_renames()
         for session in to_delete:
-            trash.trash_session(session)
+            result = trash.trash_session(session)
+            if result is None:
+                logger.warning("Session %s could not be moved to trash", session.id)
             renames.pop(session.id, None)
         save_renames(renames)
 

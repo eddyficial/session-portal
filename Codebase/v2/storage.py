@@ -8,6 +8,9 @@ from __future__ import annotations
 import json
 
 from .config import DEFAULT_SETTINGS, PROVIDER_OPTIONS, RENAMES_FILE, SETTINGS_FILE
+from .logging_setup import get_logger
+
+logger = get_logger(__name__)
 
 
 def load_settings() -> dict:
@@ -25,7 +28,7 @@ def load_settings() -> dict:
                         if key in PROVIDER_OPTIONS
                     })
         except Exception:
-            pass
+            logger.exception("Failed to load settings from %s; using defaults", SETTINGS_FILE)
     return settings
 
 
@@ -38,7 +41,7 @@ def load_renames() -> dict:
         try:
             return json.loads(RENAMES_FILE.read_text(encoding="utf-8"))
         except Exception:
-            pass
+            logger.exception("Failed to load renames from %s", RENAMES_FILE)
     return {}
 
 
