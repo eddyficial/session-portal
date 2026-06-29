@@ -47,9 +47,8 @@ def build_inspector(app, parent):
     app.preview.tag_configure("dim", foreground=app.muted)
     app.preview.tag_configure("message", foreground=app.green)
     app.preview.tag_configure("warning", foreground=app.yellow, font=app._font(weight="bold"))
-    app.preview.tag_configure("codex", foreground=app.yellow)
-    app.preview.tag_configure("grok", foreground=app.pink)
-    app.preview.tag_configure("copilot", foreground=app.purple)
+    for provider_key, color in app.provider_colors.items():
+        app.preview.tag_configure(provider_key, foreground=color)
 
     btn_frame = ctk.CTkFrame(right, fg_color=app.bg, corner_radius=0)
     btn_frame.pack(fill=tk.X, pady=(6, 8))

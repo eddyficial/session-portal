@@ -61,10 +61,8 @@ def build_table(app, parent):
     hsb = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=app.tree.xview)
     app.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
     app.tree.tag_configure("gone", foreground=app.muted)
-    app.tree.tag_configure("codex", foreground=app.yellow)
-    app.tree.tag_configure("grok", foreground=app.pink)
-    app.tree.tag_configure("copilot", foreground=app.purple)
-    app.tree.tag_configure("amp", foreground=app.blue)
+    for provider_key, color in app.provider_colors.items():
+        app.tree.tag_configure(provider_key, foreground=color)
     hsb.pack(side=tk.BOTTOM, fill=tk.X)
     vsb.pack(side=tk.RIGHT, fill=tk.Y)
     app.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)

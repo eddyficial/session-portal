@@ -170,7 +170,16 @@ ACCENT = {
     "yellow": "#ffe7a3",
     "pink": "#ff7ad9",
     "purple": "#d8b4ff",
+    "orange": "#f9c784",
     "danger": "#ff4d6d",
+}
+
+PROVIDER_COLORS = {
+    "amp": ACCENT["blue"],
+    "claude": ACCENT["orange"],
+    "codex": ACCENT["yellow"],
+    "copilot": ACCENT["purple"],
+    "grok": ACCENT["pink"],
 }
 
 
@@ -207,3 +216,7 @@ def provider_key_for_label(label: str) -> str:
         if info.get("label") == label:
             return key
     return ""
+
+
+def provider_color(key: str) -> str:
+    return PROVIDER_COLORS.get(key, APP_PALETTE["text"])

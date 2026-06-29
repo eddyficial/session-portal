@@ -26,7 +26,8 @@ def open_thread_viewer(app, session) -> None:
 
     header = tk.Frame(dialog, bg=app.bar, pady=6, padx=12)
     header.pack(fill=tk.X)
-    tk.Label(header, text=f"{session.display or '(untitled)'}", bg=app.bar, fg=app.text,
+    provider_text_color = app.provider_colors.get(session.provider, app.text)
+    tk.Label(header, text=f"{session.display or '(untitled)'}", bg=app.bar, fg=provider_text_color,
              font=app._font(2, "bold")).pack(side=tk.LEFT)
     tk.Label(header, text=f"  {len(msgs)} messages  ·  {session.provider}",
              bg=app.bar, fg=app.muted, font=app._font(-1)).pack(side=tk.LEFT, padx=(8, 0))
@@ -43,7 +44,7 @@ def open_thread_viewer(app, session) -> None:
     text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     vsb.pack(side=tk.RIGHT, fill=tk.Y)
     text.tag_configure("user_label", foreground=app.green, font=app._font(weight="bold"))
-    text.tag_configure("asst_label", foreground=app.blue, font=app._font(weight="bold"))
+    text.tag_configure("asst_label", foreground=provider_text_color, font=app._font(weight="bold"))
     text.tag_configure("user", foreground=app.green)
     text.tag_configure("assistant", foreground=app.text)
     text.tag_configure("dim", foreground=app.muted)

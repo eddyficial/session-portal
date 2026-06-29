@@ -25,6 +25,7 @@ It also detects other local AI tools during onboarding, but only tools with impl
 AI coding sessions often end up scattered across local JSONL files, CLI state folders, and provider-specific history stores. Session Portal gives you one local dashboard to:
 
 - Find old AI sessions by project, title, date, provider, or prompt text
+- Distinguish providers and model families with consistent colors
 - Preview metadata, first prompt, last prompt, token counts, and message counts
 - Resume a session in the folder where it originally ran
 - View a read-only transcript before resuming
@@ -200,7 +201,7 @@ These are the main UI states shown in the app screenshots:
 | All Models | A combined list of resumable sessions from every enabled provider. |
 | Provider filters | Narrow the table to one tool, such as AMP, Claude Code, Codex, Copilot, or Grok. |
 | Search and dates | Prefilter sessions by project, title, prompt text, or activity date. |
-| Session table | Shows the LLM, project, date, message count, and thread or last prompt. |
+| Session table | Shows the LLM, project, date, message count, and thread or last prompt with provider colors. |
 | Inspector | Shows metadata plus the first and last message for the selected session. |
 | Tooltips | Explain controls when users hover over buttons, table areas, or inspector actions. |
 | View Thread | Opens a read-only transcript window for deeper context before resuming. |

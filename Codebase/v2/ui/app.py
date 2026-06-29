@@ -21,7 +21,9 @@ from ..config import (
     APP_ICON_PNG,
     APP_PALETTE,
     PROVIDER_OPTIONS,
+    PROVIDER_COLORS,
     provider_detected,
+    provider_color,
     provider_key_for_label,
     provider_label,
 )
@@ -129,6 +131,7 @@ class SessionPortalApp:
         self.pink = ACCENT["pink"]
         self.purple = ACCENT["purple"]
         self.danger = ACCENT["danger"]
+        self.provider_colors = PROVIDER_COLORS
         self.root.configure(bg=self.bg)
 
         style = ttk.Style()
@@ -191,9 +194,11 @@ class SessionPortalApp:
             return
         for label, button in self.source_buttons.items():
             active = self.source_var.get() == label
+            provider_key = provider_key_for_label(label)
+            text_color = provider_color(provider_key) if provider_key else self.text
             button.configure(
                 fg_color=self.blue if active else self.surface_2,
-                text_color=self.bg_deep if active else self.text,
+                text_color=self.bg_deep if active else text_color,
                 hover_color=self.blue if active else self.overlay,
             )
 
@@ -579,16 +584,7 @@ class SessionPortalApp:
             message_count = get_session_message_count(s)
             display = "    " + (display_title)[:90]
 
-            if src == "grok":
-                tag = ("grok",)
-            elif src == "codex":
-                tag = ("codex",)
-            elif src == "copilot":
-                tag = ("copilot",)
-            elif src == "amp":
-                tag = ("amp",)
-            else:
-                tag = ()
+            tag = (src,) if src in self.provider_colors else ()
 
             model_label = session_model_label(s)
             check = "x" if s.id in self._checked_ids else ""
@@ -677,14 +673,7 @@ class SessionPortalApp:
         self.preview.delete("1.0", tk.END)
 
         src = session.provider
-        if src == "grok":
-            src_tag = "grok"
-        elif src == "copilot":
-            src_tag = "copilot"
-        elif src == "codex":
-            src_tag = "codex"
-        else:
-            src_tag = "dim"
+        src_tag = src if src in self.provider_colors else "dim"
 
         metadata_width = max(260, self.preview.winfo_width() - 32)
         regular_font = tkfont.Font(family=self.font_family, size=self.font_size)
