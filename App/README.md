@@ -58,6 +58,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Sort by date or project
 - Use the left source sidebar, top search/sort rail, numbered sessions table, and right inspector layout
 - Preview session metadata and prompts
+- Scroll long inspector previews independently in the right panel
 - Resume a session in its recorded working directory with the terminal opened maximized
 - Resume Grok sessions with `grok --resume <session-id>`
 - Rename sessions locally
@@ -89,6 +90,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Inspector action buttons use the same rounded CustomTkinter style as the sidebar controls.
 - Sidebar shortcut text is hidden; inspector metadata labels use compact alignment.
 - Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, and Grok.
+- The inspector preview has its own scrollbar for long prompts or context.
 - Session launch helpers suppress intermediate helper-console flashes while still opening the real terminal window.
 - Session launch helpers request maximized terminal windows for resumed sessions.
 - First launch opens source onboarding so the user can choose which local tools to scan. Saved choices are reused on later launches.

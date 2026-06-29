@@ -1497,8 +1497,11 @@ class SessionPortal:
         tk.Label(preview_header, text="Metadata and first/last prompt.", bg=self.bg,
                  fg=self.text, font=self._font(-1)).pack(side=tk.LEFT, padx=(10, 0))
 
+        preview_frame = tk.Frame(right, bg=self.surface)
+        preview_frame.pack(fill=tk.BOTH, expand=True)
+
         self.preview = tk.Text(
-            right,
+            preview_frame,
             bg=self.surface,
             fg=self.text,
             font=self._font(),
@@ -1509,7 +1512,10 @@ class SessionPortal:
             state=tk.DISABLED,
             cursor="arrow",
         )
-        self.preview.pack(fill=tk.BOTH, expand=True)
+        preview_scrollbar = ttk.Scrollbar(preview_frame, orient=tk.VERTICAL, command=self.preview.yview)
+        self.preview.configure(yscrollcommand=preview_scrollbar.set)
+        self.preview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        preview_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.preview.tag_configure("label", foreground=self.blue, font=self._font(weight="bold"))
         self.preview.tag_configure("dim", foreground=self.muted)
         self.preview.tag_configure("message", foreground=self.green)

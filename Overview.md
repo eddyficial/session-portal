@@ -65,6 +65,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Inspector action buttons use the same rounded CustomTkinter style as the sidebar controls.
 - Sidebar shortcut text is hidden; inspector metadata labels use compact alignment.
 - Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, and Grok.
+- The inspector preview has its own scrollbar for long prompts or context.
 - The app launches maximized so the `Thread / Last Prompt` column is visible by default.
 - Model inventory, model-group controls, memory sections, and non-resumable prompt-history rows are intentionally hidden; the app focuses on resumable sessions.
 - Startup keeps the root window hidden until the UI is built and the first scan is complete, avoiding the half-drawn double blink.

@@ -79,6 +79,7 @@ py -3 .\Codebase\session_portal.py
 - Filter by All Models, Claude, Codex, or Grok
 - Sort by newest, oldest, and project name
 - Preview session metadata plus first/last prompts
+- Scroll long inspector previews independently in the right panel
 - Resume sessions in their original working directory with the terminal opened maximized
 - Rename sessions locally
 - Delete selected sessions
