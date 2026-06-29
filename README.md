@@ -167,13 +167,13 @@ Click a row to inspect it. Double-click a row or press `Enter` to resume it.
 
 ### Screen Walkthrough
 
-These screenshots use a synthetic Claude Code demo flow. They do not show real user paths, project names, prompts, or session IDs.
+These screenshots use synthetic demo data. The All Models view shows multiple supported providers together, then the Claude Code screenshots show the same workflow after filtering to one provider. They do not show real user paths, project names, prompts, or session IDs.
 
 #### All Models
 
 ![Session Portal all models view](App/assets/claude-code-flow-all-models.png)
 
-Shows the combined resumable session list across enabled providers. The sidebar filters by provider, the table shows session metadata, and the inspector previews the selected row.
+Shows the combined resumable session list across enabled providers. A user starts here to see everything Session Portal found, then clicks a provider such as Claude Code to narrow the table.
 
 #### Provider Filter
 
