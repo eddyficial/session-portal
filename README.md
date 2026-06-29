@@ -103,7 +103,7 @@ Click a row once to show details in the right inspector.
 
 ### Search
 
-Use the search box at the top to find sessions by project name, title, or prompt text.
+Use the search box at the top to prefilter sessions by project name, title, or prompt text. When the box is empty, it shows the hint `Start typing to prefilter by project, title, or prompt`.
 
 Clear the search box to return to the full list.
 

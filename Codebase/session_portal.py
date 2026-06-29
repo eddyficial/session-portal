@@ -1078,7 +1078,7 @@ class SessionPortal:
         self.root = root
         self.root.title("Session Portal")
         self.root.minsize(1220, 640)
-        self.root.state("zoomed")
+        self._apply_default_window_size()
 
         self.settings = load_settings()
         self.all_sessions: list = []
@@ -1098,7 +1098,29 @@ class SessionPortal:
         self._load_data()
         self._schedule_auto_scan()
         self.root.deiconify()
+        self._apply_default_window_size()
         self.root.lift()
+
+    def _apply_default_window_size(self):
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        if screen_w > 0 and screen_h > 0:
+            self.root.geometry(f"{screen_w}x{screen_h}+0+0")
+        try:
+            self.root.state("zoomed")
+        except tk.TclError:
+            pass
+
+    def _sync_toolbar_to_table_width(self, _event=None):
+        if not all(hasattr(self, name) for name in ("toolbar_row", "toolbar_controls", "list_frame")):
+            return
+        row_width = self.toolbar_row.winfo_width()
+        table_width = self.list_frame.winfo_width()
+        if row_width <= 1 or table_width <= 1:
+            return
+        gap = 10
+        controls_width = max(320, row_width - table_width - gap)
+        self.toolbar_controls.configure(width=controls_width)
 
     def _ensure_onboarding(self):
         if not self.settings.get("onboarding_complete"):
@@ -1375,7 +1397,7 @@ class SessionPortal:
         ).pack(anchor="w", padx=18, pady=(20, 8))
         ctk.CTkLabel(
             sidebar,
-            text="Local AI Sessions",
+            text="Local AI Workspace",
             text_color=self.text,
             font=self._font(),
         ).pack(anchor="w", padx=18, pady=(0, 20))
@@ -1431,18 +1453,20 @@ class SessionPortal:
 
         header = ctk.CTkFrame(workspace, fg_color=self.bg, corner_radius=0)
         header.pack(fill=tk.X, padx=14, pady=(14, 6))
-        ctk.CTkLabel(
-            header,
-            text="Sessions",
-            text_color=self.text,
-            font=self._font(8, "bold"),
-        ).pack(side=tk.LEFT)
         self.count_label = ctk.CTkLabel(header, text="", text_color=self.text, font=self._font())
         self.count_label.pack(side=tk.RIGHT)
 
-        self.top_bar = ctk.CTkFrame(workspace, fg_color=self.bg, corner_radius=0)
-        self.top_bar.pack(fill=tk.X, padx=14, pady=(0, 8))
+        self.toolbar_row = ctk.CTkFrame(workspace, fg_color=self.bg, corner_radius=0, height=38)
+        self.toolbar_row.pack(fill=tk.X, padx=14, pady=(0, 8))
+        self.toolbar_row.pack_propagate(False)
+
+        self.top_bar = ctk.CTkFrame(self.toolbar_row, fg_color=self.bg, corner_radius=0, height=38)
+        self.top_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         top = self.top_bar
+
+        self.toolbar_controls = ctk.CTkFrame(self.toolbar_row, fg_color=self.bg, corner_radius=0, width=360, height=38)
+        self.toolbar_controls.pack(side=tk.RIGHT, fill=tk.Y)
+        self.toolbar_controls.pack_propagate(False)
 
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", self._on_search)
@@ -1452,22 +1476,20 @@ class SessionPortal:
         self.date_to_var.trace_add("write", lambda *_: self._refresh_date_buttons())
         self.search_entry = ctk.CTkEntry(
             top,
-            textvariable=self.search_var,
             width=520,
             height=38,
             corner_radius=6,
             fg_color=self.surface,
             border_width=0,
             text_color=self.text,
-            placeholder_text="Search by project or prompt",
+            placeholder_text="Start typing to prefilter by project, title, or prompt",
             placeholder_text_color=self.muted,
             font=self._font(2),
         )
-        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-        self.search_entry.focus()
-
+        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.search_entry.bind("<KeyRelease>", self._on_search_entry_change)
         self.date_range_btn = ctk.CTkButton(
-            top,
+            self.toolbar_controls,
             text="Dates: Any",
             width=164,
             height=38,
@@ -1478,10 +1500,10 @@ class SessionPortal:
             font=self._font(weight="bold"),
             command=self._open_date_range_picker,
         )
-        self.date_range_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.date_range_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
         sort_menu = ctk.CTkOptionMenu(
-            top,
+            self.toolbar_controls,
             variable=self.sort_var,
             values=[
                 "Newest",
@@ -1561,13 +1583,14 @@ class SessionPortal:
         paned = self.paned
 
         list_frame = tk.Frame(paned, bg=self.bg)
-        paned.add(list_frame, width=930, minsize=700)
+        self.list_frame = list_frame
+        paned.add(list_frame, width=1320, minsize=900)
 
         list_header = tk.Frame(list_frame, bg=self.bg, pady=4)
         list_header.pack(fill=tk.X)
         tk.Label(
             list_header,
-            text="Session List",
+            text="Threads",
             bg=self.bg,
             fg=self.blue,
             font=self._font(1, "bold"),
@@ -1591,22 +1614,24 @@ class SessionPortal:
         self.tree.heading("source", text="LLM", anchor=tk.W, command=lambda: self._toggle_sort("LLM A-Z", "LLM Z-A"))
         self.tree.heading("project", text="Project", anchor=tk.W, command=lambda: self._toggle_sort("Project A-Z", "Project Z-A"))
         self.tree.heading("date", text="Date", anchor=tk.W, command=lambda: self._toggle_sort("Oldest", "Newest"))
-        self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W, command=lambda: self._toggle_sort("Prompt A-Z", "Prompt Z-A"))
+        self.tree.heading("preview", text="    Thread / Last Prompt", anchor=tk.W, command=lambda: self._toggle_sort("Prompt A-Z", "Prompt Z-A"))
         self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=42, minwidth=38, stretch=False, anchor=tk.E)
-        self.tree.column("source", width=150, minwidth=110, stretch=False, anchor=tk.W)
-        self.tree.column("project", width=150, minwidth=90, stretch=False, anchor=tk.W)
+        self.tree.column("source", width=230, minwidth=180, stretch=False, anchor=tk.W)
+        self.tree.column("project", width=250, minwidth=160, stretch=False, anchor=tk.W)
         self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
-        self.tree.column("preview", width=520, minwidth=300, anchor=tk.W)
+        self.tree.column("preview", width=950, minwidth=420, stretch=False, anchor=tk.W)
 
         vsb = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
+        hsb = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         self.tree.tag_configure("gone", foreground=self.muted)
         self.tree.tag_configure("codex", foreground=self.yellow)
         self.tree.tag_configure("grok", foreground=self.pink)
         self.tree.tag_configure("copilot", foreground=self.purple)
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        hsb.pack(side=tk.BOTTOM, fill=tk.X)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Button-1>", self._on_tree_click)
@@ -1615,7 +1640,10 @@ class SessionPortal:
         self.tree.bind("<Button-3>", self._on_right_click)
 
         right = tk.Frame(paned, bg=self.bg)
-        paned.add(right, minsize=390)
+        paned.add(right, width=360, minsize=320)
+        self.toolbar_row.bind("<Configure>", self._sync_toolbar_to_table_width)
+        list_frame.bind("<Configure>", self._sync_toolbar_to_table_width)
+        self.root.after_idle(self._sync_toolbar_to_table_width)
 
         preview_header = tk.Frame(right, bg=self.bg, pady=4)
         preview_header.pack(fill=tk.X)
@@ -1755,8 +1783,6 @@ class SessionPortal:
             bd=6,
         )
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.search_entry.focus()
-
         sort_menu = tk.OptionMenu(top, self.sort_var,
                                   "Date ↓", "Date ↑", "Project A→Z", "Project Z→A",
                                   command=lambda _: self._apply_filter())
@@ -1863,13 +1889,13 @@ class SessionPortal:
         paned = self.paned
 
         list_frame = tk.Frame(paned, bg=self.bg)
-        paned.add(list_frame, width=910, minsize=650)
+        paned.add(list_frame, width=1320, minsize=900)
 
         list_header = tk.Frame(list_frame, bg=self.bg, pady=4)
         list_header.pack(fill=tk.X)
         tk.Label(
             list_header,
-            text="Sessions",
+            text="Threads",
             bg=self.bg,
             fg=self.blue,
             font=("Consolas", 11, "bold"),
@@ -1893,21 +1919,23 @@ class SessionPortal:
         self.tree.heading("source", text="LLM", anchor=tk.W)
         self.tree.heading("project", text="Project", anchor=tk.W)
         self.tree.heading("date", text="Date", anchor=tk.W)
-        self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W)
+        self.tree.heading("preview", text="    Thread / Last Prompt", anchor=tk.W)
         self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=44, minwidth=38, stretch=False, anchor=tk.E)
-        self.tree.column("source", width=150, minwidth=110, stretch=False, anchor=tk.W)
-        self.tree.column("project", width=150, minwidth=90, stretch=False, anchor=tk.W)
+        self.tree.column("source", width=230, minwidth=180, stretch=False, anchor=tk.W)
+        self.tree.column("project", width=250, minwidth=160, stretch=False, anchor=tk.W)
         self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
-        self.tree.column("preview", width=480, minwidth=260, anchor=tk.W)
+        self.tree.column("preview", width=950, minwidth=420, stretch=False, anchor=tk.W)
 
         vsb = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
+        hsb = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         self.tree.tag_configure("gone", foreground=self.muted)
         self.tree.tag_configure("codex", foreground=self.yellow)
         self.tree.tag_configure("grok", foreground="#ff99cc")
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        hsb.pack(side=tk.BOTTOM, fill=tk.X)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Button-1>", self._on_tree_click)
@@ -1916,7 +1944,7 @@ class SessionPortal:
         self.tree.bind("<Button-3>", self._on_right_click)
 
         right = tk.Frame(paned, bg=self.bg)
-        paned.add(right, minsize=360)
+        paned.add(right, width=360, minsize=320)
 
         preview_header = tk.Frame(right, bg=self.bg, pady=4)
         preview_header.pack(fill=tk.X)
@@ -2059,6 +2087,9 @@ class SessionPortal:
 
     def _on_search(self, *_):
         self._apply_filter()
+
+    def _on_search_entry_change(self, _event=None):
+        self.search_var.set(self.search_entry.get())
 
     def _toggle_sort(self, ascending: str, descending: str):
         self.sort_var.set(ascending if self.sort_var.get() == descending else descending)
@@ -2373,7 +2404,7 @@ class SessionPortal:
             project_short = os.path.basename(project) or project
             ts = s.get("timestamp", 0)
             date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M") if ts else ""
-            display = (display_title or "")[:90]
+            display = "    " + (display_title or "")[:90]
 
             if src == "grok":
                 tag = ("grok",)
@@ -2572,7 +2603,7 @@ class SessionPortal:
             sel = self.tree.selection()
             if sel:
                 self._checked_ids = {sel[0]}
-        self.delete_bar.pack(fill=tk.X, after=self.top_bar)
+        self.delete_bar.pack(fill=tk.X, after=getattr(self, "toolbar_row", self.top_bar))
         self.tree.column("check", width=45, minwidth=45)
         self.delete_btn.configure(state=tk.DISABLED)
         self.rename_btn.configure(state=tk.DISABLED)

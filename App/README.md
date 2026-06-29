@@ -61,13 +61,14 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 
 - Choose enabled providers during first-run onboarding
 - See other detected local AI tools during onboarding when session resume support is not available yet
-- Search sessions by project or title
+- Search sessions by project, title, or prompt; the empty search box prompts users to start typing to prefilter rows
 - Filter sessions by activity date range with the compact Dates calendar button
 - Filter by All Models, Claude Code, Codex, Grok, or Copilot
 - Toggle Auto Scan to keep supported session discovery fresh while the app is open
 - Reopen provider selection later with the Scan Sources button
 - Sort by date, LLM, project, or prompt/title from the sort menu or by clicking table headers
-- Use the left provider sidebar, top search/sort rail, numbered sessions table, and right inspector layout
+- Use the left provider sidebar, table-aligned search rail, wide numbered sessions table, and compact right inspector layout
+- The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Local AI Workspace` labels the sidebar subtitle.
 - Preview session metadata and prompts
 - Scroll long inspector previews independently in the right panel
 - Resume a session in its recorded working directory with the terminal opened maximized
@@ -111,9 +112,12 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - Vault notes must stay current when the app changes. Update this README and the project overview with any meaningful behavior, launch, provider discovery, or file-layout change.
 - Use `session_portal.pyw` for normal launching.
 - The root window stays hidden during initial UI construction and session scanning, then appears once to avoid startup flicker.
-- The app launches maximized by default so the `Thread / Last Prompt` column is visible without resizing.
+- The app sets its default window to the current screen size and launches maximized so the `Thread / Last Prompt` column is visible without resizing.
 - The current UI uses CustomTkinter for the app frame, sidebar, search, filters, and sort controls while retaining the stable Tk table and preview internals.
 - Session table headings are explicitly aligned to their row columns.
+- The session table uses fixed readable column widths and a bottom horizontal scrollbar so long prompts can be read without hiding the LLM, Project, or Date columns.
+- The layout gives the session table the primary width and keeps the right inspector compact by default.
+- The top search area is aligned to the session-table width; date and sort controls sit in the compact inspector-side rail.
 - The session table uses a singular `LLM` column and shows actual recorded LLM names when available.
 - Clicking table headers toggles sorting for date, LLM, project, and prompt/title.
 - Table header hover states keep high-contrast text so sortable columns stay readable.

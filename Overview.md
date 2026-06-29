@@ -72,20 +72,25 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - A compact Dates calendar button opens date-range controls and filters sessions by last known activity date.
 - Auto Scan reruns provider/session discovery every 60 seconds by default and can be toggled from the sidebar.
 - Manual Refresh is documented as the immediate update path for new sessions, changed provider choices, renamed rows, and deleted rows.
+- The search box prefilters sessions by project, title, or prompt and shows an empty-state hint telling users to start typing.
 - Session scanning uses bounded metadata reads so large JSONL histories do not stay in memory during refresh.
 - Provider discovery is dynamic for the current Windows user and resolves provider folders from `%USERPROFILE%`.
 - Sidebar filters are generated from enabled/detected supported providers instead of a fixed source list.
 - Other common local AI tools are detected during onboarding, but only providers with session loaders appear in the resumable session list.
 - Resume fallback behavior uses the current user's home folder when a session does not have a valid recorded project path.
-- The UI uses a CustomTkinter app shell with left-side provider navigation, a top search/sort rail, a wide numbered session table, and a right-side inspector.
+- The UI uses a CustomTkinter app shell with left-side provider navigation, a table-aligned search rail, a wide numbered session table, and a compact right-side inspector.
+- The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Local AI Workspace` labels the sidebar subtitle.
 - Session table headings and row values use explicit anchors so each label lines up with its column content.
+- The session table uses fixed readable column widths and a bottom horizontal scrollbar so long prompts can be read without hiding the LLM, Project, or Date columns.
+- The layout gives the session table the primary width and keeps the right inspector compact by default.
+- The top search area is aligned to the session-table width; date and sort controls sit in the compact inspector-side rail.
 - The app uses one fixed high-contrast theme; runtime theme switching is intentionally removed to avoid restart delays.
 - Inspector action buttons use the same rounded CustomTkinter style as the sidebar controls.
 - Inspector action buttons use high-contrast enabled and disabled text colors for readability.
 - Sidebar shortcut text is hidden; inspector metadata labels use compact alignment.
 - Inspector metadata always renders first and uses one-line sanitized values across Claude Code, Codex, Grok, and Copilot.
 - The inspector preview has its own scrollbar for long prompts or context.
-- The app launches maximized so the `Thread / Last Prompt` column is visible by default.
+- The app sets its default window to the current screen size and launches maximized so the `Thread / Last Prompt` column is visible by default.
 - LLM inventory, model-group controls, memory sections, and non-resumable prompt-history rows are intentionally hidden; the app focuses on resumable sessions.
 - Startup keeps the root window hidden until the UI is built and the first scan is complete, avoiding the half-drawn double blink.
 - Terminal launch helpers suppress intermediate helper-console flashes while still opening the actual terminal session.
