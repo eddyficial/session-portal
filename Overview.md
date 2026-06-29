@@ -1,6 +1,13 @@
 # Session Portal
 
-Session Portal is a local CustomTkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude, Codex, and Grok sessions discovered during source onboarding and only shows rows that can be resumed.
+Session Portal is a local CustomTkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude, Codex, and Grok sessions discovered during provider onboarding and only shows rows that can be resumed.
+
+## Terminology
+
+- **Session**: a resumable local conversation or work state. Each row in the app is a session.
+- **Thread**: the conversation title or prompt shown for a session.
+- **Model**: the AI engine recorded in the session file, such as `gpt-5.5`, `grok-composer-2.5-fast`, or `glm-5.2`.
+- **Provider**: the local tool that created the session, such as Claude, Codex, or Grok.
 
 ## App
 
@@ -45,7 +52,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Claude sessions: `%USERPROFILE%\.claude`
 - Codex sessions: `%USERPROFILE%\.codex`
 - Grok sessions: `%USERPROFILE%\.grok`
-- Source choices: `Codebase/settings.json`
+- Provider choices: `Codebase/settings.json`
 - Custom display names: `Codebase/renames.json`
 
 ## Behavior Notes
@@ -53,16 +60,20 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Resumable Grok session rows launch Grok with `grok --resume`.
 - Non-resumable rows are excluded, including cleaned-up history-only records and missing session files.
 - Session rows are numbered in the current filtered and sorted order for quick reference.
-- The source filter uses `All Models` as the combined/default view label.
-- Scan Sources controls which local tools/folders are scanned; All Models, Claude, Codex, and Grok filter the discovered rows.
-- Source discovery is dynamic for the current Windows user and resolves provider folders from `%USERPROFILE%`.
+- The session table uses a singular `Model` column and shows the actual recorded model name when available.
+- Clicking table headers toggles sorting for date, model, project, and prompt/title.
+- Table header hover states keep high-contrast text so sortable columns stay readable.
+- The provider filter uses `All Models` as the combined/default view label.
+- Scan Sources controls which local tools/folders are scanned; All Models, Claude, Codex, and Grok filter the discovered session rows.
+- Provider discovery is dynamic for the current Windows user and resolves provider folders from `%USERPROFILE%`.
 - Sidebar filters are generated from enabled/detected supported providers instead of a fixed source list.
 - Other common local AI tools are detected during onboarding, but only providers with session loaders appear in the resumable session list.
 - Resume fallback behavior uses the current user's home folder when a session does not have a valid recorded project path.
-- The UI uses a CustomTkinter app shell with left-side source navigation, a top search/sort rail, a wide numbered session table, and a right-side inspector.
+- The UI uses a CustomTkinter app shell with left-side provider navigation, a top search/sort rail, a wide numbered session table, and a right-side inspector.
 - Session table headings and row values use explicit anchors so each label lines up with its column content.
 - The app uses one fixed high-contrast theme; runtime theme switching is intentionally removed to avoid restart delays.
 - Inspector action buttons use the same rounded CustomTkinter style as the sidebar controls.
+- Inspector action buttons use high-contrast enabled and disabled text colors for readability.
 - Sidebar shortcut text is hidden; inspector metadata labels use compact alignment.
 - Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, and Grok.
 - The inspector preview has its own scrollbar for long prompts or context.

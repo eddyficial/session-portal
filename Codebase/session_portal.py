@@ -135,6 +135,13 @@ def provider_key_for_label(label: str) -> str:
     return ""
 
 
+def session_model_label(session: dict) -> str:
+    model = (session.get("model") or "").strip()
+    if model and not (model.startswith("<") and model.endswith(">")):
+        return model
+    return provider_label(session.get("_source", ""))
+
+
 def discover_other_ai_tools() -> list[dict]:
     found = []
     for key, info in OTHER_AI_TOOLS.items():
@@ -1212,6 +1219,18 @@ class SessionPortal:
             relief="flat",
         )
         style.map(
+            "Treeview.Heading",
+            background=[
+                ("pressed", self.blue),
+                ("active", self.surface_2),
+            ],
+            foreground=[
+                ("pressed", self.bg_deep),
+                ("active", "#ffffff"),
+            ],
+            relief=[("pressed", "flat"), ("active", "flat")],
+        )
+        style.map(
             "Treeview",
             background=[("selected", self.overlay)],
             foreground=[("selected", self.text)],
@@ -1240,7 +1259,7 @@ class SessionPortal:
             button.configure(
                 fg_color=self.blue if active else self.surface_2,
                 text_color=self.bg_deep if active else self.text,
-                hover_color=self.yellow if active else self.overlay,
+                hover_color=self.blue if active else self.overlay,
             )
 
     def _source_filter_labels(self) -> list[str]:
@@ -1366,7 +1385,16 @@ class SessionPortal:
         sort_menu = ctk.CTkOptionMenu(
             top,
             variable=self.sort_var,
-            values=["Newest", "Oldest", "Project A-Z", "Project Z-A"],
+            values=[
+                "Newest",
+                "Oldest",
+                "Model A-Z",
+                "Model Z-A",
+                "Project A-Z",
+                "Project Z-A",
+                "Prompt A-Z",
+                "Prompt Z-A",
+            ],
             command=lambda _: self._apply_filter(),
             width=142,
             height=38,
@@ -1461,14 +1489,14 @@ class SessionPortal:
             selectmode="browse",
         )
         self.tree.heading("check", text="", anchor=tk.W)
-        self.tree.heading("number", text="#", anchor=tk.E)
-        self.tree.heading("source", text="Source", anchor=tk.W)
-        self.tree.heading("project", text="Project", anchor=tk.W)
-        self.tree.heading("date", text="Date", anchor=tk.W)
-        self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W)
+        self.tree.heading("number", text="#", anchor=tk.E, command=lambda: self._toggle_sort("Oldest", "Newest"))
+        self.tree.heading("source", text="Model", anchor=tk.W, command=lambda: self._toggle_sort("Model A-Z", "Model Z-A"))
+        self.tree.heading("project", text="Project", anchor=tk.W, command=lambda: self._toggle_sort("Project A-Z", "Project Z-A"))
+        self.tree.heading("date", text="Date", anchor=tk.W, command=lambda: self._toggle_sort("Oldest", "Newest"))
+        self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W, command=lambda: self._toggle_sort("Prompt A-Z", "Prompt Z-A"))
         self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=42, minwidth=38, stretch=False, anchor=tk.E)
-        self.tree.column("source", width=58, minwidth=50, stretch=False, anchor=tk.W)
+        self.tree.column("source", width=150, minwidth=110, stretch=False, anchor=tk.W)
         self.tree.column("project", width=150, minwidth=90, stretch=False, anchor=tk.W)
         self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
         self.tree.column("preview", width=520, minwidth=300, anchor=tk.W)
@@ -1528,8 +1556,9 @@ class SessionPortal:
             btn_frame,
             text="Resume Session",
             fg_color=self.blue,
-            hover_color=self.yellow,
-            text_color=self.bg_deep,
+            hover_color="#b7cdfd",
+            text_color="#050816",
+            text_color_disabled="#dbe7ff",
             font=self._font(1, "bold"),
             corner_radius=6,
             height=40,
@@ -1544,7 +1573,8 @@ class SessionPortal:
             fg_color=self.surface_2,
             hover_color=self.overlay,
             text_color=self.text,
-            font=self._font(),
+            text_color_disabled="#cdd6f4",
+            font=self._font(weight="bold"),
             corner_radius=6,
             height=40,
             width=88,
@@ -1557,7 +1587,8 @@ class SessionPortal:
             text="Delete",
             fg_color=self.danger,
             hover_color="#ff9ab3",
-            text_color=self.bg_deep,
+            text_color="#050816",
+            text_color_disabled="#fff0f5",
             font=self._font(weight="bold"),
             corner_radius=6,
             height=40,
@@ -1758,13 +1789,13 @@ class SessionPortal:
         )
         self.tree.heading("check", text="", anchor=tk.W)
         self.tree.heading("number", text="#", anchor=tk.E)
-        self.tree.heading("source", text="Source", anchor=tk.W)
+        self.tree.heading("source", text="Model", anchor=tk.W)
         self.tree.heading("project", text="Project", anchor=tk.W)
         self.tree.heading("date", text="Date", anchor=tk.W)
         self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W)
         self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=44, minwidth=38, stretch=False, anchor=tk.E)
-        self.tree.column("source", width=58, minwidth=50, stretch=False, anchor=tk.W)
+        self.tree.column("source", width=150, minwidth=110, stretch=False, anchor=tk.W)
         self.tree.column("project", width=150, minwidth=90, stretch=False, anchor=tk.W)
         self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
         self.tree.column("preview", width=480, minwidth=260, anchor=tk.W)
@@ -1883,6 +1914,10 @@ class SessionPortal:
     def _on_search(self, *_):
         self._apply_filter()
 
+    def _toggle_sort(self, ascending: str, descending: str):
+        self.sort_var.set(ascending if self.sort_var.get() == descending else descending)
+        self._apply_filter()
+
     def _apply_filter(self):
         source_filter = self.source_var.get()
         query = self.search_var.get().lower()
@@ -1900,14 +1935,22 @@ class SessionPortal:
             ]
 
         sort = self.sort_var.get()
-        if sort in ("Newest", "Date ↓"):
+        if sort.startswith("Newest") or sort.startswith("Date"):
             pool = sorted(pool, key=lambda s: s.get("timestamp", 0), reverse=True)
-        elif sort in ("Oldest", "Date ↑"):
+        elif sort.startswith("Oldest"):
             pool = sorted(pool, key=lambda s: s.get("timestamp", 0))
-        elif sort in ("Project A-Z", "Project A→Z"):
+        elif sort == "Model A-Z":
+            pool = sorted(pool, key=lambda s: session_model_label(s).lower())
+        elif sort == "Model Z-A":
+            pool = sorted(pool, key=lambda s: session_model_label(s).lower(), reverse=True)
+        elif sort.startswith("Project A"):
             pool = sorted(pool, key=lambda s: os.path.basename(s.get("project", "")).lower())
-        elif sort in ("Project Z-A", "Project Z→A"):
+        elif sort.startswith("Project Z"):
             pool = sorted(pool, key=lambda s: os.path.basename(s.get("project", "")).lower(), reverse=True)
+        elif sort == "Prompt A-Z":
+            pool = sorted(pool, key=lambda s: (s.get("display", "") or "").lower())
+        elif sort == "Prompt Z-A":
+            pool = sorted(pool, key=lambda s: (s.get("display", "") or "").lower(), reverse=True)
 
         self.filtered_sessions = pool
         self._refresh_list()
@@ -1944,10 +1987,10 @@ class SessionPortal:
             else:
                 tag = ()
 
-            source_label = provider_label(src)
+            model_label = session_model_label(s)
             check = "x" if s["sessionId"] in self._checked_ids else ""
             self.tree.insert("", tk.END, iid=s["sessionId"],
-                             values=(check, row_num, source_label, project_short, date_str, display),
+                             values=(check, row_num, model_label, project_short, date_str, display),
                              tags=tag)
 
     def _on_select(self, _event=None):
@@ -2000,7 +2043,8 @@ class SessionPortal:
         ts = session.get("timestamp", 0)
         date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M:%S") if ts else ""
 
-        row("Source", provider_label(src), src_tag)
+        row("Model", session_model_label(session), src_tag)
+        row("Provider", provider_label(src), src_tag)
         if session.get("display"):
             row("Title", session.get("display", ""), src_tag)
         row("Project", session.get("project", ""))

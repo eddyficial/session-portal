@@ -13,6 +13,13 @@ If a session does not have a valid recorded working directory, Session Portal fa
 
 Onboarding also checks for other common local AI tools, such as Cursor, Windsurf, Gemini CLI, Continue, Aider, Ollama, and LM Studio. Those tools are listed when found, but Session Portal only shows resumable session rows for providers with implemented session loaders.
 
+## Terminology
+
+- **Session**: a resumable local conversation or work state. Each row in the app is a session.
+- **Thread**: the conversation title or prompt shown for a session.
+- **Model**: the AI engine recorded in the session file, such as `gpt-5.5`, `grok-composer-2.5-fast`, or `glm-5.2`.
+- **Provider**: the local tool that created the session, such as Claude, Codex, or Grok.
+
 ## Install
 
 Clone the repo and run commands from the repo root:
@@ -72,12 +79,12 @@ py -3 .\Codebase\session_portal.py
 
 ## Features
 
-- First-run source selection for local session providers
-- Dynamic source discovery based on the current user's installed tools and session folders
+- First-run provider selection for local session providers
+- Dynamic provider discovery based on the current user's installed tools and session folders
 - Sidebar filters are generated from enabled/detected supported providers
 - Search by project or prompt/title
 - Filter by All Models, Claude, Codex, or Grok
-- Sort by newest, oldest, and project name
+- Sort by newest, oldest, actual model name, project, or prompt/title
 - Preview session metadata plus first/last prompts
 - Scroll long inspector previews independently in the right panel
 - Resume sessions in their original working directory with the terminal opened maximized
