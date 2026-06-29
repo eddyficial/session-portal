@@ -22,7 +22,6 @@ from .base import (
     MAX_THREAD_CHARS,
     clip_preview_text,
     keep_thread_tail,
-    remember_first_last,
 )
 
 AMP_LIST_LIMIT = 500
@@ -172,21 +171,16 @@ class AmpProvider:
         return sessions
 
     def preview(self, session: Session) -> Preview:
-        messages = self.collect_thread(session)
-        first = None
-        last = None
-        count = 0
-        for msg in messages:
-            if msg.role == "user":
-                first, last, count = remember_first_last(first, last, count, msg.text)
         return Preview(
-            first=first or session.display or None,
-            last=last,
-            message_count=session.message_count or count,
+            first=session.display or None,
+            last=None,
+            message_count=session.message_count or 0,
         )
 
     def collect_messages(self, session: Session) -> list[str]:
-        return [m.text for m in self.collect_thread(session) if m.role == "user"]
+        # Search should stay fast. Full AMP Markdown is fetched only for one
+        # selected thread in View Thread / Export Thread.
+        return [session.project or "", session.display or "", session.id]
 
     def collect_thread(self, session: Session) -> list[ThreadMessage]:
         markdown = self._thread_markdown(session.id)
@@ -203,9 +197,8 @@ class AmpProvider:
         return msgs
 
     def delete(self, session: Session) -> None:
-        # AMP delete is permanent server-side. Session Portal's delete flow is a
-        # recoverable local trash flow, so this provider intentionally does not
-        # delete remote AMP threads.
+        # AMP delete is permanent server-side. The UI records a local hidden id
+        # instead of calling this provider hook.
         return None
 
     def resume_command(self, session: Session) -> ResumeCommand:

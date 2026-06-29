@@ -2,6 +2,7 @@ Codebase/settings.json
 Codebase/renames.json
 Codebase/v2/settings.json
 Codebase/v2/renames.json
+Codebase/v2/hidden_sessions.json
 Codebase/v2/audits/
 Codebase/v2/.trash/
 Codebase/v2/*.log

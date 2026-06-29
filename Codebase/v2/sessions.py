@@ -10,7 +10,7 @@ from .logging_setup import get_logger
 from .models import Preview, Session
 from .providers.base import session_model_label
 from .providers.registry import PROVIDERS, get_provider
-from .storage import load_renames, load_settings
+from .storage import load_hidden_sessions, load_renames, load_settings
 
 logger = get_logger(__name__)
 
@@ -30,11 +30,12 @@ def load_sessions(settings: dict | None = None) -> list[Session]:
                 logger.exception("Provider %s failed while loading sessions", provider.key)
 
     renames = load_renames()
+    hidden = load_hidden_sessions()
     for s in sessions:
         if s.id in renames:
             s.display = renames[s.id]
 
-    sessions = [s for s in sessions if s.resumable]
+    sessions = [s for s in sessions if s.resumable and s.id not in hidden.get(s.provider, set())]
     sessions.sort(key=lambda s: s.timestamp, reverse=True)
     return sessions
 

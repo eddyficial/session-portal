@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from .config import DEFAULT_SETTINGS, PROVIDER_OPTIONS, RENAMES_FILE, SETTINGS_FILE
+from .config import DEFAULT_SETTINGS, HIDDEN_SESSIONS_FILE, PROVIDER_OPTIONS, RENAMES_FILE, SETTINGS_FILE
 from .logging_setup import get_logger
 
 logger = get_logger(__name__)
@@ -47,3 +47,37 @@ def load_renames() -> dict:
 
 def save_renames(renames: dict) -> None:
     RENAMES_FILE.write_text(json.dumps(renames, indent=2), encoding="utf-8")
+
+
+def load_hidden_sessions() -> dict[str, set[str]]:
+    """Return locally hidden session ids by provider.
+
+    This is mainly for server-backed providers such as AMP where Session Portal
+    should hide a row locally without calling the provider's permanent delete.
+    """
+    hidden: dict[str, set[str]] = {}
+    if HIDDEN_SESSIONS_FILE.exists():
+        try:
+            data = json.loads(HIDDEN_SESSIONS_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                for provider, ids in data.items():
+                    if isinstance(ids, list):
+                        hidden[str(provider)] = {str(sid) for sid in ids if sid}
+        except Exception:
+            logger.exception("Failed to load hidden sessions from %s", HIDDEN_SESSIONS_FILE)
+    return hidden
+
+
+def save_hidden_sessions(hidden: dict[str, set[str]]) -> None:
+    data = {
+        provider: sorted(str(sid) for sid in ids if sid)
+        for provider, ids in hidden.items()
+        if ids
+    }
+    HIDDEN_SESSIONS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def hide_session(provider: str, session_id: str) -> None:
+    hidden = load_hidden_sessions()
+    hidden.setdefault(provider, set()).add(session_id)
+    save_hidden_sessions(hidden)

@@ -1,46 +1,75 @@
 # Session Portal
 
-Session Portal is a local Windows desktop app for browsing, previewing, renaming, deleting, and resuming AI coding sessions on the current user's machine.
+Session Portal is a local Windows desktop app for finding, previewing, exporting, cleaning, and resuming AI CLI sessions from one place.
 
-The app discovers supported resumable sessions dynamically from the signed-in user's home directory:
+It scans the current user's machine for supported AI coding tools, shows only resumable sessions, and opens selected sessions back in their recorded working folder.
 
-- Claude Code: `%USERPROFILE%\.claude`
-- Codex: `%USERPROFILE%\.codex`
-- Grok: `%USERPROFILE%\.grok`
-- GitHub Copilot CLI: `%USERPROFILE%\.copilot`
+![Session Portal logo](Codebase/v2/assets/logo_256.png)
 
-No API service is required. Session Portal reads local session files and opens resumable sessions in their recorded working directories.
-If a session does not have a valid recorded working directory, Session Portal falls back to the current user's home folder.
+## Supported Providers
 
-Onboarding also checks for other common local AI tools, such as Cursor, Windsurf, Gemini CLI, Continue, Aider, Ollama, and LM Studio. Those tools are listed when found, but Session Portal only shows resumable session rows for providers with implemented session loaders.
+Session Portal currently supports resumable sessions from:
 
-## Development Tracks
+- Claude Code
+- Codex
+- Grok CLI
+- GitHub Copilot CLI
+- AMP CLI
 
-- The default Session Portal launcher now uses the modular V2 app.
-- `features` is the active promotion branch for the V2 app before it is merged back to `main`.
-- V2 separates providers, sessions, storage, resume logic, trash/recovery, cost estimates, thread viewing, and UI modules.
-- The old V1 implementation is kept temporarily at `Codebase\legacy\session_portal_v1.py` as a rollback reference.
+It also detects other local AI tools during onboarding, but only tools with implemented session loaders appear in the main session list.
 
-## Terminology
+## Why Use It
 
-- **Session**: a resumable local conversation or work state. Each row in the app is a session.
-- **Thread**: the conversation title or prompt shown for a session.
-- **LLM**: the local harness plus the specific language model recorded in the session file, such as `Claude Code / glm-5.2`, `Codex / gpt-5.5`, or `Grok / grok-composer-2.5-fast`. If the session did not record one, Session Portal shows the harness with `Unknown`.
-- **Provider**: the local tool or harness that created the session, such as Claude Code, Codex, Grok, or GitHub Copilot CLI.
+AI coding sessions often end up scattered across local JSONL files, CLI state folders, and provider-specific history stores. Session Portal gives you one local dashboard to:
+
+- Find old AI sessions by project, title, date, provider, or prompt text
+- Preview metadata, first prompt, last prompt, token counts, and message counts
+- Resume a session in the folder where it originally ran
+- View a read-only transcript before resuming
+- Export a Markdown copy of a thread for review or audit records
+- Rename sessions locally without changing provider files
+- Move supported local sessions to a recoverable Trash
+- Hide AMP threads locally without calling AMP's permanent server delete
+- Clean currently shown empty sessions
+
+## Privacy Model
+
+Session Portal is local-first.
+
+- No API service is required.
+- No background server is started.
+- Session data is read from the current user's local machine.
+- Exported threads, local settings, rename files, logs, and trash data are ignored by git.
+- Resume actions open local terminal commands for the selected provider.
+
+Review the code before running it, especially because the app can resume and delete local session files.
+
+## Requirements
+
+- Windows
+- Python 3
+- Git
+- Optional: the AI CLI tools you want Session Portal to detect and resume
+
+Python dependencies are listed in:
+
+```text
+Codebase/requirements.txt
+```
+
+At the moment the app depends on:
+
+```text
+customtkinter>=6.0.0
+```
 
 ## Install
 
-Clone the repo and run commands from the repo root:
+Clone the repo:
 
 ```powershell
 git clone https://github.com/eddyficial/session-portal.git
 cd session-portal
-```
-
-Path examples in this README use `%USERPROFILE%` or placeholders such as `<your-username>`. Replace placeholders with your own Windows user folder if you prefer absolute paths. For example:
-
-```text
-C:\Users\<your-username>\session-portal
 ```
 
 Install dependencies and create a Desktop shortcut:
@@ -49,315 +78,257 @@ Install dependencies and create a Desktop shortcut:
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-After this, launch Session Portal from the Desktop shortcut named **Session Portal**.
+After installation, launch **Session Portal** from the Desktop shortcut.
 
-If you only want to install dependencies without creating a shortcut:
+Path examples use placeholders such as:
 
-```powershell
-py -3 -m pip install -r .\Codebase\requirements.txt
+```text
+C:\Users\<your-username>\session-portal
 ```
 
-If you only want to recreate the Desktop shortcut:
+Replace `<your-username>` with your Windows username if you prefer absolute paths.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
-```
+## Launch
 
-## Uninstall
-
-Session Portal is portable. To uninstall it, delete the cloned `session-portal` folder.
-
-If you created the desktop shortcut, remove it with:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
-```
-
-To also remove local Session Portal preferences from the cloned folder:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -RemoveLocalData
-```
-
-This does not delete Claude Code, Codex, Grok, Copilot, or any AI session folders under `%USERPROFILE%`.
-
-## Update
-
-If you installed Session Portal with `git clone`, update it from the cloned repo folder:
-
-```powershell
-cd %USERPROFILE%\session-portal
-git pull
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
-```
-
-In PowerShell, this path form also works:
-
-```powershell
-cd $env:USERPROFILE\session-portal
-git pull
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
-```
-
-`git pull` downloads the latest app changes. Running `install.ps1 -SkipDependencies` refreshes the Desktop shortcut without reinstalling Python packages.
-
-If dependencies changed in a future release, run the full installer again:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1
-```
-
-## Run
-
-Use the no-console launcher:
+Use the Desktop shortcut, or run:
 
 ```powershell
 pyw .\Codebase\session_portal.pyw
 ```
 
-Or double-click:
-
-```text
-launch_session_portal.bat
-```
-
-Or run the main script:
+You can also use:
 
 ```powershell
 py -3 .\Codebase\session_portal.py
 ```
 
-Both launchers start the modular V2 app.
+The `.pyw` launcher is preferred for normal use because it starts the app without opening an extra console window.
+
+The Desktop shortcut uses the bundled Session Portal icon and app identity so Windows shows Session Portal in the taskbar instead of generic Python.
+
+## Update
+
+From the cloned repo folder:
+
+```powershell
+git pull
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
+```
+
+If dependencies changed, run the full installer again:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+## Uninstall
+
+Remove the Desktop shortcut:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
+```
+
+To also remove Session Portal's local app data inside the cloned repo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -RemoveLocalData
+```
+
+Then delete the cloned `session-portal` folder if you no longer want the app.
+
+This does not delete your Claude Code, Codex, Grok, Copilot, or AMP installation folders.
 
 ## First Launch
 
-1. Start the app with `pyw .\Codebase\session_portal.pyw`.
-2. Choose which providers Session Portal should scan.
-3. Leave detected providers checked if you want their sessions in the app.
+1. Launch Session Portal.
+2. Choose the providers you want the app to scan.
+3. Keep detected providers checked if you want their sessions listed.
 4. Click **Save**.
 
-You can reopen this provider selection later with **Scan Sources** in the left sidebar.
+You can reopen provider selection later with **Scan Sources**.
 
-## How To Use
+## Main Screen
 
-### Browse Sessions
+The table shows one resumable session per row.
 
-Each row in the table is one resumable session. The table shows:
+Columns:
 
-- `#`: row number in the current filtered/sorted list
-- `LLM`: harness plus recorded model, or harness plus `Unknown` when the session did not record a model
-- `Project`: folder name where the session was originally run
+- `#`: row number in the current filtered and sorted list
+- `LLM`: provider plus recorded model, such as `Claude Code / glm-5.2`
+- `Project`: folder name where the session ran
 - `Date`: last known session activity
-- `Msgs`: useful human message count found in the session
-- `Thread / Last Prompt`: generated title, thread name, or first useful prompt
+- `Msgs`: useful human message count
+- `Thread / Last Prompt`: title, thread name, or useful prompt text
 
-Click a row once to show details in the right inspector.
+Click a row to inspect it. Double-click a row or press `Enter` to resume it.
 
-### Search
+## Search, Filter, And Sort
 
-Use the search box at the top to prefilter sessions by project name, title, or prompt text. When the box is empty, it shows the hint `Start typing to prefilter by project, title, or prompt`.
+Use the search box to filter by project, title, or prompt text.
 
-Clear the search box to return to the full list.
+Use **Dates** to select a calendar date range. Leave either side as **Any** for an open-ended range.
 
-### Date Range
+Use the left sidebar to filter by provider:
 
-Use the **Dates** calendar button to show sessions from a specific period.
+- All Models
+- AMP
+- Claude Code
+- Codex
+- Copilot
+- Grok
 
-1. Click **Dates: Any**.
-2. Choose a **From** date and a **To** date from the popup calendar controls.
-3. Leave either side as **Any** for an open-ended range.
-4. Click **Clear Dates** in the popup to remove the date filter.
-
-The date range uses each session's last known activity date. The top button shows **Dates: Custom** when a date filter is active.
-
-### Filter By Provider
-
-Use the left sidebar buttons:
-
-- **All Models** shows every discovered resumable session.
-- **Claude Code**, **Codex**, **Grok**, and **Copilot** show only that provider when available.
-
-Provider buttons appear only when the provider is enabled and detected, or when that provider already has sessions loaded.
-
-### Sort
-
-Use the sort menu in the top-right, or click table headers.
-
-Available sorts:
+Use the sort menu or click table headers to sort by:
 
 - Newest
 - Oldest
-- LLM A-Z
-- LLM Z-A
-- Project A-Z
-- Project Z-A
-- Msgs Low-High
-- Msgs High-Low
-- Prompt A-Z
-- Prompt Z-A
+- LLM A-Z / Z-A
+- Project A-Z / Z-A
+- Msgs Low-High / High-Low
+- Prompt A-Z / Z-A
 
-### Preview A Session
-
-Select any row. The right inspector shows:
-
-- LLM
-- Provider
-- Title when available
-- Project path
-- Session ID
-- Date
-- Message count
-- Token count when available
-- First and last useful prompt
-
-Long previews have their own scrollbar.
-
-### View A Thread
-
-1. Select a session row.
-2. Click **View Thread** in the inspector actions.
-3. Read the conversation in the popup window.
-4. Use the popup scrollbar for long sessions.
-5. Click **Close** when done.
-
-For large Codex sessions, the thread viewer streams the full local session file and keeps the newest readable tail in the popup. This keeps memory use bounded while making the visible ending match the latest resumed terminal chat output.
-
-### Save An Audit Copy
-
-Use **Save Audit** when you want to preserve a readable copy of a session thread for reviewing AI actions later.
-
-1. Select a session row.
-2. Click **Save Audit**.
-3. Session Portal writes a Markdown file under `Codebase/v2/audits/`.
-4. The file includes session metadata, provider, LLM, project, session id, source file path, message count, and the readable thread transcript.
-
-Audit exports are opt-in and local. They do not modify Claude Code, Codex, Grok, or Copilot session files. The `Codebase/v2/audits/` folder is ignored by Git so private thread exports are not committed by default.
-
-### Resume A Session
-
-1. Select a session row.
-2. Check the inspector on the right to confirm it is the session you want.
-3. Click the green resume button at the bottom right. The button label changes based on the selected provider, such as **Resume Claude Code**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
-4. Session Portal opens a maximized terminal in the recorded working directory and runs the provider's resume command.
-
-You can also double-click a row or press `Enter`.
-
-If the recorded working directory no longer exists, the app falls back to the current user's home folder when possible.
-
-### Rename A Session
+## Resume A Session
 
 1. Select a row.
-2. Click **Rename** at the bottom of the inspector panel.
-3. Enter a new display name in the popup.
-4. Click **OK** to save it.
+2. Check the right inspector to confirm the session.
+3. Click the green resume button.
 
-The new name appears in the table's `Thread / Last Prompt` column and helps you recognize the session later.
+Session Portal opens a maximized terminal in the recorded working directory and runs the provider's resume command.
 
-To remove a custom name:
+If the recorded folder is missing, the app falls back to the current user's home folder when possible.
 
-1. Select the renamed row.
+## View A Thread
+
+1. Select a row.
+2. Click **View Thread**.
+3. Read the transcript in the popup.
+4. Click **Close** when finished.
+
+The thread viewer is read-only and keeps large session rendering bounded so the app stays responsive.
+
+## Export A Thread
+
+Use **Export Thread** when you want a Markdown copy of a session for review, handoff, or audit records.
+
+1. Select a row.
+2. Click **Export Thread**.
+3. Choose a folder and filename in the Save As dialog.
+4. Click **Save**.
+
+The export includes metadata and a readable transcript. It does not modify provider session files.
+
+## Rename A Session
+
+1. Select a row.
 2. Click **Rename**.
-3. Clear the text box.
+3. Type a local display name.
 4. Click **OK**.
 
-The original title or prompt will show again.
+Renames are saved locally in:
 
-Renames are saved locally in `Codebase/v2/renames.json`. They do not modify the provider's original session file.
+```text
+Codebase/v2/renames.json
+```
 
-### Delete Sessions
+They do not modify provider session files. To clear a rename, open **Rename**, empty the field, and click **OK**.
 
-Deleting removes the local session records used by the provider. This cannot be undone.
+## Delete, Trash, And Clean Empty
 
-To delete one session:
+Session Portal uses a recoverable Trash for supported local provider files.
 
-1. Select a row.
-2. Click **Delete**.
-3. Confirm delete mode opens with that row selected.
-4. Click **Delete 1 Selected**.
-5. Confirm the warning dialog.
+To delete:
 
-To delete multiple sessions:
+1. Select a row and click **Delete**, or right-click a row.
+2. In delete mode, select one or more rows.
+3. Click **Delete Selected**.
+4. Confirm the warning dialog.
 
-1. Click **Delete** or right-click a row and choose a delete option.
-2. In delete mode, click rows to select or unselect them.
-3. Use **Select All** if you want every currently shown row.
-4. Click **Delete N Selected**.
-5. Confirm the warning dialog.
+Open **Trash** to restore deleted local sessions, delete selected trashed sessions forever, or empty the whole Trash.
 
-Press `Esc` or click **Cancel** to leave delete mode without deleting.
+Use **Clean Empty** to move currently shown sessions with `0` useful messages to Trash. This respects the current provider, search, and date filters.
 
-### Clean Empty Sessions
+AMP rows are different. When an AMP row is selected, the app labels the action as **Hide AMP Row**. That hides the row only inside Session Portal by saving the thread ID in `Codebase/v2/hidden_sessions.json`. It does not call `amp threads delete`, because AMP threads are server-backed and provider deletion is permanent.
 
-Use **Clean Empty Msgs** in the left sidebar to clear sessions that show `0` in the `Msgs` column.
+## Refresh And Auto Scan
 
-1. Apply any search, provider, or date filters you want.
-2. Click **Clean Empty Msgs**.
-3. Review the confirmation dialog.
-4. Confirm only if you want to permanently delete every currently shown session with `0` messages.
+- **Refresh** reloads session data immediately.
+- **Auto Scan** checks for new supported sessions every 60 seconds while the app is open.
+- **Scan Sources** reopens provider selection.
 
-The cleanup respects the current filters. For example, if the sidebar is filtered to **Claude Code**, it only targets shown Claude Code rows with `0` messages.
+Use Refresh when you just created, renamed, deleted, or resumed a session and want the list updated now.
 
-### Refresh And Auto Scan
+## Compute Costs
 
-- **Refresh** manually reloads provider/session data.
-- **Auto Scan: ON** reloads discovery every 60 seconds while the app is open.
-- Click **Auto Scan: ON/OFF** to toggle automatic scanning.
+**Compute Costs** estimates cost only when token usage is available in session files. It runs on demand so normal browsing stays fast.
 
-Auto Scan is useful when you create a new Claude Code, Codex, Grok, or Copilot session while Session Portal is already open.
+Cost estimates are approximate and provider/model pricing can change.
 
-Use **Refresh** when:
+## Keyboard Shortcuts
 
-- You just created or resumed a session and want it to appear immediately.
-- You changed provider choices with **Scan Sources**.
-- A session title, rename, or delete does not appear updated yet.
-- You turned Auto Scan off and want a manual update.
+- `Enter`: resume selected session
+- Double-click: resume selected session
+- `R`: refresh sessions
+- `Q`: quit
+- `Esc`: leave delete mode
 
-Use **Auto Scan** when:
+## Local Files
 
-- You want Session Portal to keep checking for new supported sessions in the background.
-- You are actively working in Claude Code, Codex, Grok, or Copilot while Session Portal stays open.
-- You do not want to restart the app just to see newly created sessions.
+Session Portal stores local app data under the cloned repo:
 
-### Keyboard Shortcuts
+```text
+Codebase/v2/settings.json
+Codebase/v2/renames.json
+Codebase/v2/hidden_sessions.json
+Codebase/v2/audits/
+Codebase/v2/.trash/
+Codebase/v2/session_portal.log
+```
 
-- `Enter`: resume the selected terminal chat session
-- Double-click: resume the selected terminal chat session
-- `r`: refresh sessions
-- `q`: quit
-- `Esc`: cancel delete mode
+These files are user-specific and ignored by git.
 
-## Features
+The rotating error log records startup crashes, provider scan failures, failed CLI calls, resume failures, export failures, rename-save failures, and trash/restore problems.
 
-- First-run provider selection for local session providers
-- Dynamic provider discovery based on the current user's installed tools and session folders
-- Sidebar filters are generated from enabled/detected supported providers
-- Search by project or prompt/title
-- Filter by activity date range
-- Filter by All Models, Claude Code, Codex, Grok, or Copilot
-- Sort by newest, oldest, LLM name, project, or prompt/title
-- Show message counts in the `Msgs` column and sort by message count
-- Auto Scan refreshes supported provider/session discovery while the app is open
-- Preview session metadata plus first/last prompts
-- View the readable thread transcript without launching the provider
-- Save a local Markdown audit copy of a selected thread
-- Scroll long inspector previews independently in the right panel
-- Resume sessions in their original working directory with the terminal opened maximized
-- Rename sessions locally
-- Delete selected sessions
-- Clean currently shown empty sessions after confirmation
+## Project Layout
 
-## Local App Data
+```text
+App/                         Public app README and project notes
+Codebase/
+  requirements.txt           Python dependencies
+  session_portal.py          Console launcher
+  session_portal.pyw         No-console launcher
+  v2/                        Modular app package
+  legacy/session_portal_v1.py Legacy rollback reference
+install.ps1                  Dependency install + Desktop shortcut
+install_desktop_shortcut.ps1 Shortcut installer
+uninstall_desktop_shortcut.ps1 Shortcut/local-data uninstall helper
+launch_session_portal.bat    Repo-folder launcher
+SECURITY.md                  Security policy
+```
 
-Session Portal stores local preferences next to the app:
+## Development
 
-- `Codebase/v2/settings.json`
-- `Codebase/v2/renames.json`
-- `Codebase/v2/audits/`
+Run tests from the repo root:
 
-These files and folders are ignored by Git because they are user-specific.
+```powershell
+py -3 -m pytest Codebase\v2\tests -q
+```
 
-## Notes
+The V2 app is organized into focused modules:
 
-- Only resumable sessions are shown.
-- Theme switching and model inventory views are intentionally omitted to keep the app focused and fast.
-- The app is currently designed for Windows.
+- providers
+- session aggregation
+- storage
+- resume launch logic
+- trash/recovery
+- thread export
+- UI builders
+
+Provider failures are isolated and logged so one broken provider or corrupt session file does not prevent the rest of the app from loading.
+
+AMP is intentionally optimized for normal browsing: refresh, preview, and search use `amp threads list --json` metadata. Session Portal only calls `amp threads markdown <id>` when the user opens **View Thread** or **Export Thread** for one selected AMP thread.
+
+## Security
+
+See [SECURITY.md](SECURITY.md).
+
+In short: Session Portal is a local desktop utility. It does not intentionally upload session contents. Delete, export, and resume actions are explicit user actions.

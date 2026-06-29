@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import tkinter as tk
+import tkinter.font as tkfont
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
@@ -36,7 +37,7 @@ from ..sessions import (
     get_session_preview,
     load_sessions,
 )
-from ..storage import load_renames, load_settings, save_renames, save_settings
+from ..storage import hide_session, load_renames, load_settings, save_renames, save_settings
 from . import date_picker, inspector, onboarding, sidebar, table
 from .tooltips import add_tooltip
 
@@ -62,7 +63,7 @@ class SessionPortalApp:
         self.root.title("Session Portal")
         if APP_ICON.exists():
             try:
-                self.root.iconbitmap(str(APP_ICON))
+                self.root.iconbitmap(default=str(APP_ICON))
             except tk.TclError:
                 pass
         self._window_icon_image = None
@@ -618,8 +619,10 @@ class SessionPortalApp:
         }.get(src, f"Resume {provider_label(src)}")
         self.action_btn.configure(text=label, fg_color=self.green,
                                   text_color="#000000", state=tk.NORMAL)
+        delete_label = "Hide AMP Row" if src == "amp" else "Delete"
+        self.delete_btn.configure(text=delete_label)
         self.rename_btn.configure(state=tk.NORMAL)
-        self.delete_btn.configure(state=tk.DISABLED if src == "amp" else tk.NORMAL)
+        self.delete_btn.configure(state=tk.NORMAL)
         if hasattr(self, "audit_btn"):
             self.audit_btn.configure(state=tk.NORMAL)
         if hasattr(self, "thread_btn"):
@@ -683,10 +686,26 @@ class SessionPortalApp:
         else:
             src_tag = "dim"
 
+        metadata_width = max(260, self.preview.winfo_width() - 32)
+        regular_font = tkfont.Font(family=self.font_family, size=self.font_size)
+        compact_font = tkfont.Font(family=self.font_family, size=max(8, self.font_size - 2))
+
         def row(label, value, tag="dim"):
             value = " ".join(str(value or "").split())
-            self.preview.insert(tk.END, f"{label:<8} ", "label")
-            self.preview.insert(tk.END, f"{value}\n", tag)
+            padded = f"{label:<8} {value}"
+            if regular_font.measure(padded) <= metadata_width:
+                self.preview.insert(tk.END, f"{label:<8} ", "label")
+                self.preview.insert(tk.END, f"{value}\n", tag)
+                return
+
+            # Narrow inspectors should still keep important one-line metadata
+            # like provider session IDs readable. Use compact spacing and font
+            # only when the normal aligned label column would force wrapping.
+            compact_line = f"{label} {value}"
+            value_tags = (tag, "compact") if compact_font.measure(compact_line) <= metadata_width else tag
+            label_tag = "compact_label" if value_tags != tag else "label"
+            self.preview.insert(tk.END, f"{label} ", label_tag)
+            self.preview.insert(tk.END, f"{value}\n", value_tags)
 
         ts = session.timestamp
         date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M:%S") if ts else ""
@@ -715,6 +734,14 @@ class SessionPortalApp:
             cost = _session_cost(session)
             if cost is not None:
                 row("Cost", f"~${cost:,.4f}", src_tag)
+
+        if src == "amp":
+            self.preview.insert(tk.END, "\nAMP delete status\n", "label")
+            self.preview.insert(
+                tk.END,
+                "Delete hides this row in Session Portal only. It does not delete the AMP server thread.\n",
+                "warning",
+            )
 
         if first:
             self.preview.insert(tk.END, "\n── First message ──\n", "label")
@@ -773,9 +800,11 @@ class SessionPortalApp:
                        font=("Consolas", 10))
         menu.add_command(label="Rename", command=self._rename_session)
         menu.add_separator()
-        menu.add_command(label="Delete This Session",
+        row_session = next((s for s in self.filtered_sessions if s.id == row), None)
+        is_amp = bool(row_session and row_session.provider == "amp")
+        menu.add_command(label="Hide This AMP Row" if is_amp else "Delete This Session",
                          command=lambda sid=row: self._enter_delete_mode(pre_check_sid=sid))
-        menu.add_command(label=f"Delete All {n} Shown",
+        menu.add_command(label=f"Delete / Hide All {n} Shown",
                          command=lambda: self._enter_delete_mode(pre_check_all=True))
         menu.tk_popup(event.x_root, event.y_root)
 
@@ -827,6 +856,7 @@ class SessionPortalApp:
         self.delete_bar.pack(fill=tk.X, after=getattr(self, "toolbar_row", self.top_bar))
         self.tree.column("check", width=45, minwidth=45)
         self.delete_btn.configure(state=tk.DISABLED)
+        self.delete_btn.configure(text="Delete")
         self.rename_btn.configure(state=tk.DISABLED)
         self.action_btn.configure(state=tk.DISABLED)
         if hasattr(self, "audit_btn"):
@@ -860,10 +890,13 @@ class SessionPortalApp:
         self._refresh_list()
 
     def _update_delete_bar(self):
-        n = sum(1 for s in self.filtered_sessions if s.id in self._checked_ids)
+        checked = [s for s in self.filtered_sessions if s.id in self._checked_ids]
+        n = len(checked)
         total = len(self.filtered_sessions)
+        has_amp = any(s.provider == "amp" for s in checked)
+        delete_text = f"Hide {n} AMP Row{'s' if n != 1 else ''}" if has_amp and all(s.provider == "amp" for s in checked) else f"Delete / Hide {n} Selected" if has_amp else f"Delete {n} Selected"
         self.confirm_delete_btn.config(
-            text=f"Delete {n} Selected",
+            text=delete_text,
             state=tk.NORMAL if n > 0 else tk.DISABLED,
         )
         self.select_all_btn.config(
@@ -871,13 +904,16 @@ class SessionPortalApp:
         )
 
     def _delete_sessions(self, to_delete: list[Session]) -> None:
-        """Move sessions to the trash bin (recoverable), after confirmation."""
+        """Move local sessions to trash; hide server-backed AMP rows locally."""
         from .. import trash
         renames = load_renames()
         for session in to_delete:
-            result = trash.trash_session(session)
-            if result is None:
-                logger.warning("Session %s could not be moved to trash", session.id)
+            if session.provider == "amp":
+                hide_session(session.provider, session.id)
+            else:
+                result = trash.trash_session(session)
+                if result is None:
+                    logger.warning("Session %s could not be moved to trash", session.id)
             renames.pop(session.id, None)
         save_renames(renames)
 
@@ -891,10 +927,17 @@ class SessionPortalApp:
         n = len(to_delete)
         if n == 0:
             return
+        has_amp = any(s.provider == "amp" for s in to_delete)
+        has_local = any(s.provider != "amp" for s in to_delete)
+        title = "Delete / Hide Sessions" if has_amp and has_local else "Hide AMP Rows" if has_amp else "Move to Trash"
+        detail_lines = []
+        if has_local:
+            detail_lines.append("Local provider sessions move to Session Portal Trash and can be restored.")
+        if has_amp:
+            detail_lines.append("AMP threads are hidden only in Session Portal. They are not deleted from AMP.")
         if not messagebox.askyesno(
-                "Move to Trash",
-                f"Move {n} session{'s' if n > 1 else ''} to the trash?\n\n"
-                "You can restore them from the Trash bin. Use Empty Trash to remove permanently.",
+                title,
+                f"Apply this to {n} selected row{'s' if n > 1 else ''}?\n\n" + "\n".join(detail_lines),
                 icon="warning"):
             return
         self._delete_sessions(to_delete)
@@ -909,11 +952,16 @@ class SessionPortalApp:
         if n == 0:
             messagebox.showinfo("No empty sessions", "No sessions with 0 messages are shown in the current list.")
             return
+        has_amp = any(s.provider == "amp" for s in to_delete)
+        has_local = any(s.provider != "amp" for s in to_delete)
+        detail_lines = ["This uses the current search, provider, and date filters."]
+        if has_local:
+            detail_lines.append("Local provider sessions move to Session Portal Trash and can be restored.")
+        if has_amp:
+            detail_lines.append("AMP threads are hidden only in Session Portal. They are not deleted from AMP.")
         if not messagebox.askyesno(
-                "Move empty sessions to trash",
-                f"Move {n} shown session{'s' if n > 1 else ''} with 0 messages to the trash?\n\n"
-                "This uses the current search, provider, and date filters.\n"
-                "You can restore them from the Trash bin.",
+                "Clean Empty Sessions",
+                f"Clean {n} shown row{'s' if n > 1 else ''} with 0 messages?\n\n" + "\n".join(detail_lines),
                 icon="warning"):
             return
         self._delete_sessions(to_delete)

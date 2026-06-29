@@ -42,8 +42,11 @@ def build_inspector(app, parent):
     preview_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
     add_tooltip(app.preview, "Read-only preview of the selected session. Use View Thread for a longer transcript view.")
     app.preview.tag_configure("label", foreground=app.blue, font=app._font(weight="bold"))
+    app.preview.tag_configure("compact_label", foreground=app.blue, font=app._font(-2, "bold"))
+    app.preview.tag_configure("compact", font=app._font(-2))
     app.preview.tag_configure("dim", foreground=app.muted)
     app.preview.tag_configure("message", foreground=app.green)
+    app.preview.tag_configure("warning", foreground=app.yellow, font=app._font(weight="bold"))
     app.preview.tag_configure("codex", foreground=app.yellow)
     app.preview.tag_configure("grok", foreground=app.pink)
     app.preview.tag_configure("copilot", foreground=app.purple)
@@ -112,7 +115,7 @@ def build_inspector(app, parent):
         state=tk.DISABLED,
     )
     app.delete_btn.grid(row=1, column=1, sticky="ew", padx=(4, 0), pady=(0, 6))
-    add_tooltip(app.delete_btn, "Move the selected session to Session Portal trash after confirmation.")
+    add_tooltip(app.delete_btn, "Delete local sessions by moving them to Trash. AMP rows are only hidden in Session Portal; AMP threads are not deleted.")
     app.action_btn = ctk.CTkButton(
         btn_frame,
         text="Resume Session",

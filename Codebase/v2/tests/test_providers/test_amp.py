@@ -31,7 +31,7 @@ def test_amp_loads_threads_from_cli_json(monkeypatch):
     assert s.message_count == 4
 
 
-def test_amp_preview_and_thread_from_markdown(monkeypatch):
+def test_amp_preview_stays_fast_and_thread_uses_markdown(monkeypatch):
     markdown = """---
 title: Example
 ---
@@ -50,13 +50,33 @@ done
 
 last request
 """
-    monkeypatch.setattr(amp, "_run_amp", lambda args, timeout=30: _completed(markdown))
+    calls = []
+
+    def fake_run(args, timeout=30):
+        calls.append(args)
+        return _completed(markdown)
+
+    monkeypatch.setattr(amp, "_run_amp", fake_run)
     session = Session(id="T-123", provider="amp", project="", display="Example", message_count=2)
 
     preview = amp.AmpProvider().preview(session)
+    assert calls == []
+    assert preview.first == "Example"
+    assert preview.last is None
+    assert preview.message_count == 2
+
     thread = amp.AmpProvider().collect_thread(session)
 
-    assert preview.first == "first request"
-    assert preview.last == "last request"
-    assert preview.message_count == 2
+    assert calls == [["threads", "markdown", "T-123"]]
     assert [m.role for m in thread] == ["user", "assistant", "user"]
+
+
+def test_amp_search_messages_do_not_fetch_markdown(monkeypatch):
+    calls = []
+    monkeypatch.setattr(amp, "_run_amp", lambda args, timeout=30: calls.append(args) or _completed(""))
+    session = Session(id="T-123", provider="amp", project="C:/proj", display="Example", message_count=2)
+
+    messages = amp.AmpProvider().collect_messages(session)
+
+    assert calls == []
+    assert messages == ["C:/proj", "Example", "T-123"]
