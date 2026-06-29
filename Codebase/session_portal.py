@@ -38,7 +38,7 @@ MAX_PREVIEW_MESSAGE_CHARS = 600
 
 PROVIDER_OPTIONS = {
     "claude": {
-        "label": "Claude",
+        "label": "Claude Code",
         "description": "Claude Code sessions and history",
         "path": str(CLAUDE_DIR),
         "paths": [CLAUDE_DIR],
@@ -152,9 +152,9 @@ def provider_key_for_label(label: str) -> str:
 
 def session_model_label(session: dict) -> str:
     model = (session.get("model") or "").strip()
-    if model and not (model.startswith("<") and model.endswith(">")):
-        return model
-    return provider_label(session.get("_source", ""))
+    if not model or (model.startswith("<") and model.endswith(">")):
+        model = "Unknown"
+    return f"{provider_label(session.get('_source', ''))} / {model}"
 
 
 def discover_other_ai_tools() -> list[dict]:
@@ -265,12 +265,12 @@ def model_group_label(source: str, model: str = "") -> str:
     if source == "claude":
         lower = model.lower()
         if "opus" in lower:
-            return "Claude / Opus"
+            return "Claude Code / Opus"
         if "sonnet" in lower:
-            return "Claude / Sonnet"
+            return "Claude Code / Sonnet"
         if "haiku" in lower:
-            return "Claude / Haiku"
-        return f"Claude / {model}" if model else "Claude / Unknown"
+            return "Claude Code / Haiku"
+        return f"Claude Code / {model}" if model else "Claude Code / Unknown"
     if source == "codex":
         return f"OpenAI / {model}" if model else "OpenAI / Codex"
     return model or "Unknown"
@@ -1486,8 +1486,8 @@ class SessionPortal:
             values=[
                 "Newest",
                 "Oldest",
-                "Model A-Z",
-                "Model Z-A",
+                "LLM A-Z",
+                "LLM Z-A",
                 "Project A-Z",
                 "Project Z-A",
                 "Prompt A-Z",
@@ -1588,7 +1588,7 @@ class SessionPortal:
         )
         self.tree.heading("check", text="", anchor=tk.W)
         self.tree.heading("number", text="#", anchor=tk.E, command=lambda: self._toggle_sort("Oldest", "Newest"))
-        self.tree.heading("source", text="Model", anchor=tk.W, command=lambda: self._toggle_sort("Model A-Z", "Model Z-A"))
+        self.tree.heading("source", text="LLM", anchor=tk.W, command=lambda: self._toggle_sort("LLM A-Z", "LLM Z-A"))
         self.tree.heading("project", text="Project", anchor=tk.W, command=lambda: self._toggle_sort("Project A-Z", "Project Z-A"))
         self.tree.heading("date", text="Date", anchor=tk.W, command=lambda: self._toggle_sort("Oldest", "Newest"))
         self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W, command=lambda: self._toggle_sort("Prompt A-Z", "Prompt Z-A"))
@@ -1890,7 +1890,7 @@ class SessionPortal:
         )
         self.tree.heading("check", text="", anchor=tk.W)
         self.tree.heading("number", text="#", anchor=tk.E)
-        self.tree.heading("source", text="Model", anchor=tk.W)
+        self.tree.heading("source", text="LLM", anchor=tk.W)
         self.tree.heading("project", text="Project", anchor=tk.W)
         self.tree.heading("date", text="Date", anchor=tk.W)
         self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W)
@@ -2334,9 +2334,9 @@ class SessionPortal:
             pool = sorted(pool, key=lambda s: s.get("timestamp", 0), reverse=True)
         elif sort.startswith("Oldest"):
             pool = sorted(pool, key=lambda s: s.get("timestamp", 0))
-        elif sort == "Model A-Z":
+        elif sort in ("Model A-Z", "LLM A-Z"):
             pool = sorted(pool, key=lambda s: session_model_label(s).lower())
-        elif sort == "Model Z-A":
+        elif sort in ("Model Z-A", "LLM Z-A"):
             pool = sorted(pool, key=lambda s: session_model_label(s).lower(), reverse=True)
         elif sort.startswith("Project A"):
             pool = sorted(pool, key=lambda s: os.path.basename(s.get("project", "")).lower())
@@ -2413,7 +2413,7 @@ class SessionPortal:
             self.action_btn.configure(text="Resume Codex", fg_color=self.green,
                                       text_color="#000000", state=tk.NORMAL)
         elif src == "claude":
-            self.action_btn.configure(text="Resume Session", fg_color=self.green,
+            self.action_btn.configure(text="Resume Claude Code", fg_color=self.green,
                                       text_color="#000000", state=tk.NORMAL)
         else:
             self.action_btn.configure(text=f"Resume {provider_label(src)}", fg_color=self.green,
@@ -2445,7 +2445,7 @@ class SessionPortal:
         ts = session.get("timestamp", 0)
         date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M:%S") if ts else ""
 
-        row("Model", session_model_label(session), src_tag)
+        row("LLM", session_model_label(session), src_tag)
         row("Provider", provider_label(src), src_tag)
         if session.get("display"):
             row("Title", session.get("display", ""), src_tag)

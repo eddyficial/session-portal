@@ -4,7 +4,7 @@ Session Portal is a local Windows desktop app for browsing, previewing, renaming
 
 The app discovers supported resumable sessions dynamically from the signed-in user's home directory:
 
-- Claude: `%USERPROFILE%\.claude`
+- Claude Code: `%USERPROFILE%\.claude`
 - Codex: `%USERPROFILE%\.codex`
 - Grok: `%USERPROFILE%\.grok`
 - GitHub Copilot CLI: `%USERPROFILE%\.copilot`
@@ -18,8 +18,8 @@ Onboarding also checks for other common local AI tools, such as Cursor, Windsurf
 
 - **Session**: a resumable local conversation or work state. Each row in the app is a session.
 - **Thread**: the conversation title or prompt shown for a session.
-- **Model**: the AI engine recorded in the session file, such as `gpt-5.5`, `grok-composer-2.5-fast`, or `glm-5.2`.
-- **Provider**: the local tool that created the session, such as Claude, Codex, Grok, or GitHub Copilot CLI.
+- **LLM**: the local harness plus the specific language model recorded in the session file, such as `Claude Code / glm-5.2`, `Codex / gpt-5.5`, or `Grok / grok-composer-2.5-fast`. If the session did not record one, Session Portal shows the harness with `Unknown`.
+- **Provider**: the local tool or harness that created the session, such as Claude Code, Codex, Grok, or GitHub Copilot CLI.
 
 ## Install
 
@@ -62,7 +62,7 @@ To also remove local Session Portal preferences from the cloned folder:
 powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -RemoveLocalData
 ```
 
-This does not delete Claude, Codex, Grok, Copilot, or any AI session folders under `%USERPROFILE%`.
+This does not delete Claude Code, Codex, Grok, Copilot, or any AI session folders under `%USERPROFILE%`.
 
 ## Run
 
@@ -94,7 +94,7 @@ You can reopen this provider selection later with **Scan Sources** in the left s
 Each row in the table is one resumable session. The table shows:
 
 - `#`: row number in the current filtered/sorted list
-- `Model`: recorded model or provider fallback
+- `LLM`: harness plus recorded model, or harness plus `Unknown` when the session did not record a model
 - `Project`: folder name where the session was originally run
 - `Date`: last known session activity
 - `Thread / Last Prompt`: generated title, thread name, or first useful prompt
@@ -123,7 +123,7 @@ The date range uses each session's last known activity date. The top button show
 Use the left sidebar buttons:
 
 - **All Models** shows every discovered resumable session.
-- **Claude**, **Codex**, **Grok**, and **Copilot** show only that provider when available.
+- **Claude Code**, **Codex**, **Grok**, and **Copilot** show only that provider when available.
 
 Provider buttons appear only when the provider is enabled and detected, or when that provider already has sessions loaded.
 
@@ -135,8 +135,8 @@ Available sorts:
 
 - Newest
 - Oldest
-- Model A-Z
-- Model Z-A
+- LLM A-Z
+- LLM Z-A
 - Project A-Z
 - Project Z-A
 - Prompt A-Z
@@ -146,7 +146,7 @@ Available sorts:
 
 Select any row. The right inspector shows:
 
-- Model
+- LLM
 - Provider
 - Title when available
 - Project path
@@ -161,7 +161,7 @@ Long previews have their own scrollbar.
 ### Resume A Session
 
 1. Select a session row.
-2. Click **Resume Session**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
+2. Click **Resume Claude Code**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
 3. Session Portal opens a maximized terminal in the recorded working directory.
 
 You can also double-click a row or press `Enter`.
@@ -207,7 +207,7 @@ Press `Esc` or click **Cancel** to leave delete mode without deleting.
 - **Auto Scan: ON** reloads discovery every 60 seconds while the app is open.
 - Click **Auto Scan: ON/OFF** to toggle automatic scanning.
 
-Auto Scan is useful when you create a new Claude, Codex, Grok, or Copilot session while Session Portal is already open.
+Auto Scan is useful when you create a new Claude Code, Codex, Grok, or Copilot session while Session Portal is already open.
 
 Use **Refresh** when:
 
@@ -219,7 +219,7 @@ Use **Refresh** when:
 Use **Auto Scan** when:
 
 - You want Session Portal to keep checking for new supported sessions in the background.
-- You are actively working in Claude, Codex, Grok, or Copilot while Session Portal stays open.
+- You are actively working in Claude Code, Codex, Grok, or Copilot while Session Portal stays open.
 - You do not want to restart the app just to see newly created sessions.
 
 ### Keyboard Shortcuts
@@ -237,8 +237,8 @@ Use **Auto Scan** when:
 - Sidebar filters are generated from enabled/detected supported providers
 - Search by project or prompt/title
 - Filter by activity date range
-- Filter by All Models, Claude, Codex, Grok, or Copilot
-- Sort by newest, oldest, actual model name, project, or prompt/title
+- Filter by All Models, Claude Code, Codex, Grok, or Copilot
+- Sort by newest, oldest, LLM name, project, or prompt/title
 - Auto Scan refreshes supported provider/session discovery while the app is open
 - Preview session metadata plus first/last prompts
 - Scroll long inspector previews independently in the right panel
