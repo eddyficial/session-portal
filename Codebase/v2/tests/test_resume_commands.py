@@ -5,7 +5,7 @@ functions monkeypatched to deterministic values so the tests are stable on any
 machine.
 """
 from Codebase.v2.models import Session
-from Codebase.v2.providers import claude, codex, copilot, grok
+from Codebase.v2.providers import amp, claude, codex, copilot, grok
 
 
 def _mk(provider: str, **kw) -> Session:
@@ -71,6 +71,13 @@ def test_copilot_resume_command():
     assert cmd.shell_command == (
         r"gh copilot -- -C 'C:\proj' --resume='00000000-0000-4000-8000-000000000000'"
     )
+
+
+def test_amp_resume_command(monkeypatch):
+    monkeypatch.setattr(amp, "find_amp_exe", lambda: "amp")
+    cmd = amp.AmpProvider().resume_command(_mk("amp", id="T-123"))
+    assert cmd.cwd == r"C:\proj"
+    assert cmd.shell_command == "amp threads continue 'T-123'"
 
 
 def test_resume_command_cwd_falls_back_to_home_when_project_blank():

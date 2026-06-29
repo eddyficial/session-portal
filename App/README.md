@@ -1,13 +1,13 @@
 # Session Portal App
 
-Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude Code, Codex, Grok, and GitHub Copilot CLI sessions on this machine. It uses the modular V2 CustomTkinter shell and only shows sessions that can be resumed.
+Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, exporting, and resuming Claude Code, Codex, Grok, GitHub Copilot CLI, and AMP CLI sessions on this machine. It uses the modular V2 CustomTkinter shell and only shows sessions that can be resumed.
 
 ## Terminology
 
 - **Session**: a resumable local conversation or work state. Each row in the app is a session.
 - **Thread**: the conversation title or prompt shown for a session.
 - **LLM**: the local harness plus the specific language model recorded in the session file, such as `Claude Code / glm-5.2`, `Codex / gpt-5.5`, or `Grok / grok-composer-2.5-fast`. If the session did not record one, Session Portal shows the harness with `Unknown`.
-- **Provider**: the local tool or harness that created the session, such as Claude Code, Codex, Grok, or GitHub Copilot CLI.
+- **Provider**: the local tool or harness that created the session, such as Claude Code, Codex, Grok, GitHub Copilot CLI, or AMP CLI.
 
 ## Launch
 
@@ -68,6 +68,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Codex sessions from `%USERPROFILE%\.codex`
 - Grok sessions from `%USERPROFILE%\.grok\sessions`
 - GitHub Copilot CLI sessions from `%USERPROFILE%\.copilot\session-state`
+- AMP CLI threads from `amp threads list --json`; AMP also uses local state under `%USERPROFILE%\.local\share\amp`, `%USERPROFILE%\.config\amp`, `%USERPROFILE%\.amp`, and `%LOCALAPPDATA%\amp`
 - Generated titles when available
 - Project folders where sessions were originally run
 - Actual LLM names from session files when available
@@ -82,19 +83,22 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - See other detected local AI tools during onboarding when session resume support is not available yet
 - Search sessions by project, title, or prompt; the empty search box prompts users to start typing to prefilter rows
 - Filter sessions by activity date range with the compact Dates calendar button
-- Filter by All Models, Claude Code, Codex, Grok, or Copilot
+- Filter by All Models, Claude Code, Codex, Grok, Copilot, or AMP
 - Toggle Auto Scan to keep supported session discovery fresh while the app is open
 - Reopen provider selection later with the Scan Sources button
 - Sort by date, LLM, project, or prompt/title from the sort menu or by clicking table headers
 - Sort by message count from the `Msgs` header or sort menu
 - Use the left provider sidebar, table-aligned search rail, wide numbered sessions table, and compact right inspector layout
-- The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Local AI Workspace` labels the sidebar subtitle.
-- Preview session metadata and prompts
+- The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Resume Your Sessions` labels the sidebar subtitle.
+- Hover over buttons, filters, the inspector, and table areas to see short tooltips that explain what each control does
+- Preview session metadata, first prompt, last prompt, token counts, and provider details in the inspector
 - Open the read-only thread viewer for a selected session
+- Export the selected thread as a Markdown file for review, handoff, or AI-action auditing, with a folder and filename chosen by the user
 - Scroll long inspector previews independently in the right panel
 - Resume a session in its recorded working directory with the terminal opened maximized
 - Resume Grok sessions with `grok --resume <session-id>`
 - Resume Copilot sessions with `gh copilot -- --resume=<session-id>`
+- Resume AMP sessions with `amp threads continue <thread-id>`
 - Rename sessions locally
 - Delete selected sessions
 - Clean currently shown empty sessions with **Clean Empty Msgs** after confirmation
@@ -115,6 +119,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 10. Use Delete to enter delete mode, select one or more rows, click Delete Selected, and confirm the warning dialog.
 11. Use Esc or Cancel to leave delete mode without deleting.
 12. Use **Clean Empty Msgs** to remove currently shown sessions with no useful human messages after confirmation.
+13. Use **Export Thread** to open a Save As dialog, choose where the Markdown export should go, and confirm the filename.
 
 ## Rename And Resume
 
@@ -131,9 +136,36 @@ To resume a session:
 
 1. Select one row.
 2. Confirm the metadata in the right inspector.
-3. Click the green provider-specific resume button, such as **Resume Claude Code**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
+3. Click the green provider-specific resume button, such as **Resume Claude Code**, **Resume Codex**, **Resume Grok**, **Resume Copilot**, or **Resume AMP**.
 
 The app opens a maximized terminal in the session's recorded working directory and runs the provider resume command. Double-clicking a row or pressing `Enter` also resumes the selected terminal chat session.
+
+## Export Thread
+
+1. Select one row.
+2. Click **Export Thread** in the inspector.
+3. Pick a folder in the Save As dialog.
+4. Keep the suggested Markdown filename or type a new one.
+5. Click **Save**.
+
+The export is a local Markdown file containing the session metadata and readable transcript. It is useful when the user wants to review why an AI tool took certain actions, keep a handoff record, or archive a thread outside the provider's session folder. By default, Session Portal suggests `Codebase/v2/audits/`, but the export can be saved anywhere the user chooses. If the dialog is canceled, nothing is written.
+
+## Tooltips
+
+Most important controls have hover help:
+
+- Sidebar filters explain whether they show all sessions or one provider.
+- **Scan Sources** explains that it reopens provider selection and discovery.
+- **Refresh** explains that it reloads session data immediately.
+- **Clean Empty** explains that it removes currently shown sessions with no useful messages after confirmation.
+- **Auto Scan** explains the background refresh behavior.
+- **Trash** explains recovery and permanent purge for deleted sessions.
+- **Compute Costs** explains that cost estimates are calculated only when requested.
+- The search box explains that it filters by project, title, first prompt, or last prompt.
+- **Dates** explains calendar date filtering.
+- The sort menu explains list ordering.
+- The session table explains row selection and sortable columns.
+- The inspector and action buttons explain preview, rename, thread viewing, export, delete, and resume behavior.
 
 Auto Scan refreshes provider/session discovery every 60 seconds by default. The sidebar toggle can turn it off when the user wants only manual Refresh behavior. Manual Refresh is used when the user wants new sessions, renamed rows, deleted rows, or changed provider choices to appear immediately.
 
@@ -154,6 +186,7 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - Codebase folder: `Codebase`
 - Saved provider choices: `Codebase/v2/settings.json`
 - Custom names file: `Codebase/v2/renames.json`
+- Default audit export folder: `Codebase/v2/audits`
 
 ## Current Notes
 
@@ -185,9 +218,11 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - Session scanning uses bounded metadata reads so large JSONL histories do not stay in memory during refresh.
 - Sidebar filters are generated from enabled/detected supported providers instead of a fixed source list.
 - Other common local AI tools are detected during onboarding, but only providers with session loaders appear in the resumable session list.
+- AMP support uses AMP's own CLI for thread listing, Markdown preview/export content, and resume commands. AMP delete is intentionally not wired to Session Portal trash because `amp threads delete` permanently deletes server-backed threads.
 - Resume fallback behavior uses the current user's home folder when a session does not have a valid recorded project path.
-- Scan Sources controls which local tools/folders are scanned; All Models, Claude Code, Codex, Grok, and Copilot are filters for already discovered session rows.
+- Scan Sources controls which local tools/folders are scanned; All Models, Claude Code, Codex, Grok, Copilot, and AMP are filters for already discovered session rows.
 - Non-resumable rows are excluded from the list, including cleaned-up history-only records and missing session files.
 - Restart the app after code edits; the Refresh button reloads session data, not Python source code.
 - The app intentionally hides model inventory, model-group controls, memory sections, and non-resumable prompt-history rows.
 - The app does not require an API service.
+- **Export Thread** opens a native Save As dialog instead of silently writing to only one folder.

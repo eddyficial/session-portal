@@ -13,6 +13,7 @@ import subprocess
 from pathlib import Path
 
 from .config import (
+    AMP_DIR,
     CODEX_EXE_DIR,
     CODEX_PROGRAMS_EXE_DIR,
     CREATE_NO_WINDOW,
@@ -50,6 +51,16 @@ def find_grok_exe() -> str:
     if GROK_EXE.exists():
         return str(GROK_EXE)
     return "grok"
+
+
+def find_amp_exe() -> str:
+    found = shutil.which("amp")
+    if found:
+        return found
+    local = AMP_DIR / "bin" / "amp.exe"
+    if local.exists():
+        return str(local)
+    return "amp"
 
 
 def has_windows_terminal() -> bool:

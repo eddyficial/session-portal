@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from ..config import provider_detected
 from .base import Provider
+from .amp import AmpProvider
 from .claude import ClaudeProvider
 from .codex import CodexProvider
 from .copilot import CopilotProvider
@@ -17,6 +18,7 @@ PROVIDERS: list[Provider] = [
     CodexProvider(),
     GrokProvider(),
     CopilotProvider(),
+    AmpProvider(),
 ]
 
 _BY_KEY = {p.key: p for p in PROVIDERS}

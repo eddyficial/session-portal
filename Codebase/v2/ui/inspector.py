@@ -6,6 +6,8 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import ttk
 
+from .tooltips import add_tooltip
+
 
 def build_inspector(app, parent):
     right = tk.Frame(parent, bg=app.bg)
@@ -17,6 +19,7 @@ def build_inspector(app, parent):
              font=app._font(1, "bold")).pack(side=tk.LEFT)
     tk.Label(preview_header, text="Metadata and first/last prompt.", bg=app.bg,
              fg=app.text, font=app._font(-1)).pack(side=tk.LEFT, padx=(10, 0))
+    add_tooltip(preview_header, "Shows metadata, token counts, and the first and last prompt for the selected session.")
 
     preview_frame = tk.Frame(right, bg=app.surface)
     preview_frame.pack(fill=tk.BOTH, expand=True)
@@ -37,6 +40,7 @@ def build_inspector(app, parent):
     app.preview.configure(yscrollcommand=preview_scrollbar.set)
     app.preview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     preview_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    add_tooltip(app.preview, "Read-only preview of the selected session. Use View Thread for a longer transcript view.")
     app.preview.tag_configure("label", foreground=app.blue, font=app._font(weight="bold"))
     app.preview.tag_configure("dim", foreground=app.muted)
     app.preview.tag_configure("message", foreground=app.green)
@@ -63,6 +67,7 @@ def build_inspector(app, parent):
         state=tk.DISABLED,
     )
     app.rename_btn.grid(row=0, column=0, sticky="ew", padx=(0, 4), pady=(0, 6))
+    add_tooltip(app.rename_btn, "Give this session a local display name. This does not rename provider files.")
     app.thread_btn = ctk.CTkButton(
         btn_frame,
         text="View Thread",
@@ -77,9 +82,10 @@ def build_inspector(app, parent):
         state=tk.DISABLED,
     )
     app.thread_btn.grid(row=0, column=1, sticky="ew", padx=(4, 0), pady=(0, 6))
+    add_tooltip(app.thread_btn, "Open a read-only transcript view for the selected session.")
     app.audit_btn = ctk.CTkButton(
         btn_frame,
-        text="Save Audit",
+        text="Export Thread",
         fg_color=app.surface_2,
         hover_color=app.overlay,
         text_color=app.text,
@@ -91,6 +97,7 @@ def build_inspector(app, parent):
         state=tk.DISABLED,
     )
     app.audit_btn.grid(row=1, column=0, sticky="ew", padx=(0, 4), pady=(0, 6))
+    add_tooltip(app.audit_btn, "Export the selected thread to a Markdown file for review or audit records.")
     app.delete_btn = ctk.CTkButton(
         btn_frame,
         text="Delete",
@@ -105,6 +112,7 @@ def build_inspector(app, parent):
         state=tk.DISABLED,
     )
     app.delete_btn.grid(row=1, column=1, sticky="ew", padx=(4, 0), pady=(0, 6))
+    add_tooltip(app.delete_btn, "Move the selected session to Session Portal trash after confirmation.")
     app.action_btn = ctk.CTkButton(
         btn_frame,
         text="Resume Session",
@@ -119,5 +127,6 @@ def build_inspector(app, parent):
         state=tk.DISABLED,
     )
     app.action_btn.grid(row=2, column=0, columnspan=2, sticky="ew")
+    add_tooltip(app.action_btn, "Resume the selected terminal chat session in its recorded working folder.")
 
     return right

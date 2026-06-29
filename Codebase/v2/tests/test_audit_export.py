@@ -43,3 +43,29 @@ def test_export_session_audit_writes_metadata_and_thread(tmp_path):
     assert "| Session | 00000000-0000-4000-8000-000000000000 |" in text
     assert "why did you do that?" in text
     assert "because the tests failed" in text
+
+
+def test_export_session_audit_accepts_exact_save_path(tmp_path):
+    sessions_dir = tmp_path / "sessions"
+    sessions_dir.mkdir()
+    fp = sessions_dir / f"rollout-2026-04-28T12-26-45-{SID}.jsonl"
+    _write_jsonl(fp, [
+        {"type": "response_item", "payload": {"type": "message", "role": "user",
+          "content": [{"type": "input_text", "text": "save this where I choose"}]}},
+    ])
+    session = Session(
+        id=SID,
+        provider="codex",
+        project=str(tmp_path),
+        model="gpt-test",
+        display="Custom Path",
+        timestamp=1_800_000_000_000,
+        source_file=str(fp),
+    )
+    target = tmp_path / "chosen" / "my-session-record.md"
+
+    path = export_session_audit(session, export_path=target)
+
+    assert path == target
+    assert target.exists()
+    assert "save this where I choose" in target.read_text(encoding="utf-8")

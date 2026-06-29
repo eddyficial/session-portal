@@ -4,6 +4,8 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from .tooltips import add_tooltip
+
 
 def build_table(app, parent):
     list_frame = tk.Frame(parent, bg=app.bg)
@@ -26,6 +28,7 @@ def build_table(app, parent):
         fg=app.text,
         font=app._font(-1),
     ).pack(side=tk.LEFT, padx=(10, 0))
+    add_tooltip(list_header, "This table lists resumable AI sessions. Click a row to inspect it; double-click or press Enter to resume.")
 
     app.tree = ttk.Treeview(
         list_frame,
@@ -61,6 +64,7 @@ def build_table(app, parent):
     app.tree.tag_configure("codex", foreground=app.yellow)
     app.tree.tag_configure("grok", foreground=app.pink)
     app.tree.tag_configure("copilot", foreground=app.purple)
+    app.tree.tag_configure("amp", foreground=app.blue)
     hsb.pack(side=tk.BOTTOM, fill=tk.X)
     vsb.pack(side=tk.RIGHT, fill=tk.Y)
     app.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -70,5 +74,9 @@ def build_table(app, parent):
     app.tree.bind("<Double-1>", app._on_action)
     app.tree.bind("<Return>", app._on_action)
     app.tree.bind("<Button-3>", app._on_right_click)
+    add_tooltip(
+        app.tree,
+        "Click a session to preview it. Column headers sort the list. Double-click or press Enter to resume the selected session.",
+    )
 
     return list_frame

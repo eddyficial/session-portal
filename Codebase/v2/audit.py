@@ -37,7 +37,18 @@ def _render_messages(messages: list[ThreadMessage]) -> str:
     return "\n".join(parts).strip() + "\n"
 
 
-def export_session_audit(session: Session, export_dir: Path | None = None) -> Path:
+def default_audit_filename(session: Session) -> str:
+    """Return a safe default Markdown filename for a session audit export."""
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    title = session.display or session.id
+    return f"{stamp}-{_safe_filename(provider_label(session.provider))}-{_safe_filename(title)}.md"
+
+
+def export_session_audit(
+    session: Session,
+    export_dir: Path | None = None,
+    export_path: Path | None = None,
+) -> Path:
     """Write a local Markdown audit export for one selected session."""
     provider = get_provider(session.provider)
     if provider is None:
@@ -45,14 +56,16 @@ def export_session_audit(session: Session, export_dir: Path | None = None) -> Pa
 
     messages = provider.collect_thread(session)
     preview = provider.preview(session)
-    target_dir = export_dir or AUDIT_DIR
-    target_dir.mkdir(parents=True, exist_ok=True)
+    if export_path is not None:
+        path = Path(export_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        target_dir = export_dir or AUDIT_DIR
+        target_dir.mkdir(parents=True, exist_ok=True)
+        path = target_dir / default_audit_filename(session)
 
     exported_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     title = session.display or session.id
-    filename = f"{stamp}-{_safe_filename(provider_label(session.provider))}-{_safe_filename(title)}.md"
-    path = target_dir / filename
 
     source_file = session.source_file or ""
     session_date = (
@@ -82,4 +95,4 @@ def export_session_audit(session: Session, export_dir: Path | None = None) -> Pa
     return path
 
 
-__all__ = ["export_session_audit"]
+__all__ = ["default_audit_filename", "export_session_audit"]

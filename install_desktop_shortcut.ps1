@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = $PSScriptRoot
 $appScript = Join-Path $repoRoot "Codebase\session_portal.pyw"
 $workingDirectory = Join-Path $repoRoot "Codebase"
-$appIcon = Join-Path $repoRoot "Codebase\v2\assets\logo.ico"
+$appIcon = Join-Path $repoRoot "Codebase\v2\assets\session_portal.ico"
 
 if (-not (Test-Path -LiteralPath $appScript)) {
     throw "Could not find Session Portal launcher: $appScript. Run this script from the Session Portal repo folder."
@@ -28,7 +28,7 @@ $shortcut.WorkingDirectory = $workingDirectory
 $shortcut.WindowStyle = 3
 $shortcut.Description = "Launch Session Portal"
 if (Test-Path -LiteralPath $appIcon) {
-    $shortcut.IconLocation = $appIcon
+    $shortcut.IconLocation = "$appIcon,0"
 } else {
     $shortcut.IconLocation = "$($launcher.Source),0"
 }

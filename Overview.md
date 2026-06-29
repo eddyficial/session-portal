@@ -65,6 +65,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Codex sessions: `%USERPROFILE%\.codex`
 - Grok sessions: `%USERPROFILE%\.grok`
 - GitHub Copilot CLI sessions: `%USERPROFILE%\.copilot\session-state`
+- AMP CLI threads: detected from `%USERPROFILE%\.amp`, `%USERPROFILE%\.config\amp`, `%USERPROFILE%\.local\share\amp`, `%LOCALAPPDATA%\amp`, and loaded through `amp threads list --json`
 - Provider choices: `Codebase/v2/settings.json`
 - Custom display names: `Codebase/v2/renames.json`
 
@@ -72,6 +73,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 
 - Resumable Grok session rows launch Grok with `grok --resume`.
 - Resumable Copilot session rows launch GitHub Copilot CLI with `gh copilot -- --resume=<session-id>`.
+- Resumable AMP thread rows launch AMP CLI with `amp threads continue <thread-id>`. AMP thread listing and Markdown preview/export content use AMP's own CLI because the complete thread data is server-backed, not fully stored as local JSONL. Session Portal intentionally does not map its recoverable trash button to `amp threads delete` because AMP delete is permanent server-side.
 - Basic use flow is documented in the public README: launch, choose providers, search/filter/sort, inspect, resume, rename, delete, refresh, and toggle Auto Scan.
 - Public README now explains rename and resume step by step: select a row, confirm inspector metadata, use **Rename** for local display names, or use the green provider-specific resume button/double-click/Enter to reopen the terminal chat session.
 - Delete mode requires explicit row selection plus a confirmation dialog; Esc or Cancel exits without deleting.
@@ -119,7 +121,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - On 2026-06-29, the `features` Git branch was created and pushed for V2 feature work.
 - V2 is now the default app on the promotion branch.
 - V2 is the preferred engineering direction because it separates providers, session aggregation, storage, resume launch behavior, trash/recovery, thread viewing, cost estimates, and UI modules.
-- The V2 provider layer is the desired foundation for Claude Code, Codex, Grok, Copilot, and future local AI tools, instead of continuing to expand one large `session_portal.py` file.
+- The V2 provider layer is the desired foundation for Claude Code, Codex, Grok, Copilot, AMP, and future local AI tools, instead of continuing to expand one large `session_portal.py` file.
 - V1 remains archived at `Codebase/legacy/session_portal_v1.py` as a temporary rollback reference.
 - Current V2 tests pass locally: provider parsing, bounded reads, delete safety, resume-command construction, search indexing, trash/recovery, thread viewing, and cost estimates.
 - V2 live smoke test on 2026-06-29 confirmed the app launches maximized, loads the session table, shows the sidebar controls, and keeps cost totals hidden until explicitly computed. A cost-rollup side effect was fixed so message-count scanning no longer caches token costs automatically.
@@ -127,8 +129,10 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - The thread viewer now keeps the newest bounded slice of large transcripts and scrolls to the bottom on open so the visible ending matches the inspector's last message. Inspector metadata labels were tightened so the full session GUID stays on the `Session` line.
 - Inspector token and cache counts now use compact `M`/`K` formatting so token metadata stays on one line in the right panel.
 - Codex thread viewing now streams the full selected rollout file before applying the bounded render tail. This fixes large-session mismatches where the resumed CLI showed newer final messages than **View Thread**.
-- Selected threads can now be saved as local Markdown audit exports through **Save Audit**. Exports live under `Codebase/v2/audits/`, include metadata plus the readable thread transcript, and are git-ignored by default.
+- Selected threads can now be saved as local Markdown review/audit exports through **Export Thread**. The button opens a Windows Save As dialog so users can choose the destination folder and filename. The default location remains `Codebase/v2/audits/`, exports include metadata plus the readable thread transcript, and generated audit files are git-ignored by default.
 - Security check on 2026-06-29 found no embedded API keys or secrets in the repo scan. The main hardening change added path-boundary checks around trash restore, purge, empty-trash, and direct Grok/Copilot provider deletes so edited local state cannot move or delete files outside the app trash or expected provider session folders. Static scanner warnings remain only for intentional `Popen` terminal launches that must stay open for resumed chats.
+- Branding update on 2026-06-29 replaced the old small mark with a compact glowing portal-door icon inspired by the provided Session Portal wordmark. The app keeps its high-contrast dark utility UI and borrows only the electric blue/violet accent for the icon, avoiding a full chrome/neon UI theme shift. The mark now appears visibly in the sidebar, loads through both Tk `iconbitmap` and `iconphoto`, and the Desktop shortcut points at `session_portal.ico` to avoid stale Windows icon-cache behavior.
+- Usability update on 2026-06-29 added hover tooltips for the brand area, provider filters, source scanning, refresh, clean-empty, auto-scan, trash, cost estimate, search, date range, sort menu, session table, inspector preview, and inspector actions. The public README now documents those tooltips plus the **Export Thread** flow for saving review/audit Markdown files.
 
 ## Operating Rule
 

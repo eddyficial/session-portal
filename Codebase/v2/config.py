@@ -25,11 +25,16 @@ GROK_SESSIONS_DIR = GROK_DIR / "sessions"
 GROK_MODELS_FILE = GROK_DIR / "models_cache.json"
 GROK_EXE = GROK_DIR / "bin" / "grok.exe"
 
+APPDATA_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+LOCALAPPDATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+
 COPILOT_DIR = Path.home() / ".copilot"
 COPILOT_SESSIONS_DIR = COPILOT_DIR / "session-state"
 
-APPDATA_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-LOCALAPPDATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+AMP_DIR = Path.home() / ".amp"
+AMP_CONFIG_DIR = Path.home() / ".config" / "amp"
+AMP_DATA_DIR = Path.home() / ".local" / "share" / "amp"
+AMP_LOCALAPPDATA_DIR = LOCALAPPDATA_DIR / "amp"
 
 # v2-local data files (kept inside the v2 package so v1 is untouched).
 _V2_DIR = Path(__file__).resolve().parent
@@ -38,7 +43,8 @@ SETTINGS_FILE = _V2_DIR / "settings.json"
 TRASH_DIR = _V2_DIR / ".trash"
 AUDIT_DIR = _V2_DIR / "audits"
 ASSETS_DIR = _V2_DIR / "assets"
-APP_ICON = ASSETS_DIR / "logo.ico"
+APP_ICON = ASSETS_DIR / "session_portal.ico"
+APP_ICON_PNG = ASSETS_DIR / "logo_256.png"
 
 # ── Bounded-read safety constants ───────────────────────────────────────────
 CREATE_NO_WINDOW = getattr(__import__("subprocess"), "CREATE_NO_WINDOW", 0)
@@ -46,7 +52,7 @@ MAX_METADATA_SCAN_BYTES = 2 * 1024 * 1024
 MAX_JSON_LINE_CHARS = 400_000
 MAX_PREVIEW_MESSAGE_CHARS = 600
 
-# ── Provider catalog (the four resumable sources) ────────────────────────────
+# ── Provider catalog (resumable sources) ─────────────────────────────────────
 PROVIDER_OPTIONS: dict[str, dict] = {
     "claude": {
         "label": "Claude Code",
@@ -76,6 +82,13 @@ PROVIDER_OPTIONS: dict[str, dict] = {
         "paths": [COPILOT_DIR, COPILOT_SESSIONS_DIR, LOCALAPPDATA_DIR / "copilot",
                   LOCALAPPDATA_DIR / "GitHub CLI" / "copilot"],
         "commands": ["gh"],
+    },
+    "amp": {
+        "label": "AMP",
+        "description": "AMP CLI threads",
+        "path": str(AMP_DATA_DIR),
+        "paths": [AMP_DIR, AMP_CONFIG_DIR, AMP_DATA_DIR, AMP_LOCALAPPDATA_DIR],
+        "commands": ["amp"],
     },
 }
 
@@ -111,6 +124,16 @@ OTHER_AI_TOOLS: dict[str, dict] = {
         "label": "Ollama",
         "paths": [Path.home() / ".ollama"],
         "commands": ["ollama"],
+    },
+    "opencode": {
+        "label": "OpenCode",
+        "paths": [Path.home() / ".opencode", APPDATA_DIR / "opencode", LOCALAPPDATA_DIR / "opencode"],
+        "commands": ["opencode"],
+    },
+    "qwen": {
+        "label": "Qwen Code",
+        "paths": [Path.home() / ".qwen", APPDATA_DIR / "qwen-code", LOCALAPPDATA_DIR / "qwen-code"],
+        "commands": ["qwen", "qwen-code"],
     },
     "lmstudio": {
         "label": "LM Studio",

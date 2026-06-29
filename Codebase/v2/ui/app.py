@@ -10,13 +10,14 @@ import os
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import customtkinter as ctk
 
 from ..config import (
     ACCENT,
     APP_ICON,
+    APP_ICON_PNG,
     APP_PALETTE,
     PROVIDER_OPTIONS,
     provider_detected,
@@ -36,6 +37,7 @@ from ..sessions import (
 )
 from ..storage import load_renames, load_settings, save_renames, save_settings
 from . import date_picker, inspector, onboarding, sidebar, table
+from .tooltips import add_tooltip
 
 
 def compact_number(value: int) -> str:
@@ -60,6 +62,13 @@ class SessionPortalApp:
                 self.root.iconbitmap(str(APP_ICON))
             except tk.TclError:
                 pass
+        self._window_icon_image = None
+        if APP_ICON_PNG.exists():
+            try:
+                self._window_icon_image = tk.PhotoImage(file=str(APP_ICON_PNG))
+                self.root.iconphoto(True, self._window_icon_image)
+            except tk.TclError:
+                self._window_icon_image = None
         self.root.minsize(1220, 640)
         self._apply_default_window_size()
 
@@ -213,6 +222,12 @@ class SessionPortalApp:
                 command=lambda value=label: self._set_source_filter(value),
             )
             btn.pack(fill=tk.X, pady=3)
+            tip = (
+                "Show sessions from every enabled provider."
+                if label == "All Models"
+                else f"Show only {label} sessions."
+            )
+            add_tooltip(btn, tip)
             self.source_buttons[label] = btn
         self._refresh_source_buttons()
 
@@ -230,6 +245,7 @@ class SessionPortalApp:
         header.pack(fill=tk.X, padx=14, pady=(14, 6))
         self.count_label = ctk.CTkLabel(header, text="", text_color=self.text, font=self._font())
         self.count_label.pack(side=tk.RIGHT)
+        add_tooltip(self.count_label, "Shows how many sessions are currently visible and how many each provider contributed.")
 
         self.toolbar_row = ctk.CTkFrame(workspace, fg_color=self.bg, corner_radius=0, height=38)
         self.toolbar_row.pack(fill=tk.X, padx=14, pady=(0, 8))
@@ -262,6 +278,7 @@ class SessionPortalApp:
         )
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_entry.bind("<KeyRelease>", self._on_search_entry_change)
+        add_tooltip(self.search_entry, "Type to filter sessions by project, title, first prompt, or last prompt.")
         self.date_range_btn = ctk.CTkButton(
             self.toolbar_controls,
             text="Dates: Any",
@@ -275,8 +292,9 @@ class SessionPortalApp:
             command=self._open_date_range_picker,
         )
         self.date_range_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+        add_tooltip(self.date_range_btn, "Filter sessions by last activity date using a calendar range.")
 
-        ctk.CTkOptionMenu(
+        self.sort_menu = ctk.CTkOptionMenu(
             self.toolbar_controls,
             variable=self.sort_var,
             values=[
@@ -297,7 +315,9 @@ class SessionPortalApp:
             dropdown_hover_color=self.overlay,
             text_color=self.text,
             font=self._font(1),
-        ).pack(side=tk.RIGHT)
+        )
+        self.sort_menu.pack(side=tk.RIGHT)
+        add_tooltip(self.sort_menu, "Choose how the session list is sorted.")
 
         self._build_delete_bar(workspace)
 
@@ -317,14 +337,16 @@ class SessionPortalApp:
         bar.pack(fill=tk.X, side=tk.BOTTOM)
         tk.Label(
             bar,
-            text="  Double-click or Enter to resume terminal chat session  |  r refresh  |  q quit",
+            text="  Double-click or Enter to resume terminal chat session  |  R Refresh  |  Q Quit",
             bg=self.bar,
             fg=self.text,
             font=self._font(-1),
         ).pack(side=tk.LEFT)
 
         self.root.bind("<r>", lambda e: self._load_data() if not self._delete_mode else None)
+        self.root.bind("<R>", lambda e: self._load_data() if not self._delete_mode else None)
         self.root.bind("q", lambda e: self.root.quit())
+        self.root.bind("Q", lambda e: self.root.quit())
         self.root.bind("<Escape>", lambda e: self._exit_delete_mode() if self._delete_mode else None)
         self._refresh_source_buttons()
         self._refresh_date_buttons()
@@ -339,17 +361,21 @@ class SessionPortalApp:
             padx=10, pady=2, cursor="hand2", command=self._toggle_select_all,
         )
         self.select_all_btn.pack(side=tk.LEFT)
+        add_tooltip(self.select_all_btn, "Select or clear all currently shown sessions in delete mode.")
         self.confirm_delete_btn = tk.Button(
             self.delete_bar, text="Delete 0 Selected", bg=self.bg, fg=self.danger,
             activebackground=self.surface, font=self._font(weight="bold"), relief=tk.FLAT,
             padx=12, pady=2, cursor="hand2", command=self._confirm_delete, state=tk.DISABLED,
         )
         self.confirm_delete_btn.pack(side=tk.RIGHT)
-        tk.Button(
+        add_tooltip(self.confirm_delete_btn, "Move selected sessions to Session Portal trash after confirmation.")
+        cancel_delete_btn = tk.Button(
             self.delete_bar, text="Cancel", bg=self.overlay, fg=self.text,
             activebackground=self.surface_2, font=self._font(), relief=tk.FLAT,
             padx=10, pady=2, cursor="hand2", command=self._exit_delete_mode,
-        ).pack(side=tk.RIGHT, padx=(0, 8))
+        )
+        cancel_delete_btn.pack(side=tk.RIGHT, padx=(0, 8))
+        add_tooltip(cancel_delete_btn, "Leave delete mode without deleting anything.")
 
     def _sync_toolbar_to_table_width(self, _event=None):
         if not all(hasattr(self, name) for name in ("toolbar_row", "toolbar_controls", "list_frame")):
@@ -551,6 +577,8 @@ class SessionPortalApp:
                 tag = ("codex",)
             elif src == "copilot":
                 tag = ("copilot",)
+            elif src == "amp":
+                tag = ("amp",)
             else:
                 tag = ()
 
@@ -579,11 +607,12 @@ class SessionPortalApp:
             "copilot": "Resume Copilot",
             "codex": "Resume Codex",
             "claude": "Resume Claude Code",
+            "amp": "Resume AMP",
         }.get(src, f"Resume {provider_label(src)}")
         self.action_btn.configure(text=label, fg_color=self.green,
                                   text_color="#000000", state=tk.NORMAL)
         self.rename_btn.configure(state=tk.NORMAL)
-        self.delete_btn.configure(state=tk.NORMAL)
+        self.delete_btn.configure(state=tk.DISABLED if src == "amp" else tk.NORMAL)
         if hasattr(self, "audit_btn"):
             self.audit_btn.configure(state=tk.NORMAL)
         if hasattr(self, "thread_btn"):
@@ -609,12 +638,24 @@ class SessionPortalApp:
         if not session:
             return
         try:
-            from ..audit import export_session_audit
-            path = export_session_audit(session)
+            from ..audit import default_audit_filename, export_session_audit
+            from ..config import AUDIT_DIR
+
+            target = filedialog.asksaveasfilename(
+                parent=self.root,
+                title="Export Thread",
+                initialdir=str(AUDIT_DIR),
+                initialfile=default_audit_filename(session),
+                defaultextension=".md",
+                filetypes=[("Markdown files", "*.md"), ("Text files", "*.txt"), ("All files", "*.*")],
+            )
+            if not target:
+                return
+            path = export_session_audit(session, export_path=Path(target))
         except Exception as exc:
             messagebox.showerror("Audit export failed", str(exc))
             return
-        messagebox.showinfo("Audit saved", f"Saved thread audit:\n\n{path}")
+        messagebox.showinfo("Thread exported", f"Saved thread export:\n\n{path}")
 
     def _show_preview(self, session: Session):
         preview = get_session_preview(session)
