@@ -22,6 +22,12 @@ git clone https://github.com/eddyficial/session-portal.git
 cd session-portal
 ```
 
+Path examples in this README use `%USERPROFILE%` or placeholders such as `<your-username>`. Replace placeholders with your own Windows user folder if you prefer absolute paths. For example:
+
+```text
+C:\Users\<your-username>\session-portal
+```
+
 ```powershell
 py -3 -m pip install -r .\Codebase\requirements.txt
 ```
