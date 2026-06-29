@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import calendar
 import json
 import os
 import shutil
@@ -24,11 +25,16 @@ GROK_DIR = Path.home() / ".grok"
 GROK_SESSIONS_DIR = GROK_DIR / "sessions"
 GROK_MODELS_FILE = GROK_DIR / "models_cache.json"
 GROK_EXE = GROK_DIR / "bin" / "grok.exe"
+COPILOT_DIR = Path.home() / ".copilot"
+COPILOT_SESSIONS_DIR = COPILOT_DIR / "session-state"
 APPDATA_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
 LOCALAPPDATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
 RENAMES_FILE = Path(__file__).parent / "renames.json"
 SETTINGS_FILE = Path(__file__).parent / "settings.json"
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+MAX_METADATA_SCAN_BYTES = 2 * 1024 * 1024
+MAX_JSON_LINE_CHARS = 400_000
+MAX_PREVIEW_MESSAGE_CHARS = 600
 
 PROVIDER_OPTIONS = {
     "claude": {
@@ -51,6 +57,13 @@ PROVIDER_OPTIONS = {
         "path": str(GROK_DIR),
         "paths": [GROK_DIR, GROK_EXE],
         "commands": ["grok"],
+    },
+    "copilot": {
+        "label": "Copilot",
+        "description": "GitHub Copilot CLI sessions",
+        "path": str(COPILOT_DIR),
+        "paths": [COPILOT_DIR, COPILOT_SESSIONS_DIR, LOCALAPPDATA_DIR / "copilot", LOCALAPPDATA_DIR / "GitHub CLI" / "copilot"],
+        "commands": ["gh"],
     },
 }
 
@@ -95,6 +108,8 @@ OTHER_AI_TOOLS = {
 DEFAULT_SETTINGS = {
     "onboarding_complete": False,
     "providers": {key: True for key in PROVIDER_OPTIONS},
+    "auto_scan_enabled": True,
+    "auto_scan_interval_ms": 60000,
 }
 
 APP_PALETTE = {
@@ -102,10 +117,10 @@ APP_PALETTE = {
     "bg_deep": "#090910",
     "surface": "#242438",
     "surface_2": "#1b1b2b",
-    "overlay": "#4f536a",
+    "overlay": "#5f6682",
     "bar": "#090910",
-    "muted": "#a9b4d0",
-    "text": "#f4f7ff",
+    "muted": "#d4dcf5",
+    "text": "#ffffff",
 }
 
 
@@ -150,6 +165,41 @@ def discover_other_ai_tools() -> list[dict]:
     return found
 
 
+def _clip_preview_text(text: str, limit: int = MAX_PREVIEW_MESSAGE_CHARS) -> str:
+    text = " ".join((text or "").split())
+    return text[:limit]
+
+
+def _remember_first_last(first: str | None, last: str | None, count: int, text: str):
+    text = _clip_preview_text(text)
+    if not text:
+        return first, last, count
+    if first is None:
+        first = text
+    else:
+        last = text
+    return first, last, count + 1
+
+
+def _iter_jsonl_records(fp: Path, max_bytes: int | None = None):
+    read_bytes = 0
+    try:
+        with open(fp, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                read_bytes += len(line.encode("utf-8", errors="ignore"))
+                if max_bytes is not None and read_bytes > max_bytes:
+                    break
+                line = line.strip()
+                if not line or len(line) > MAX_JSON_LINE_CHARS:
+                    continue
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return
+
+
 # ── Claude session loading ────────────────────────────────────────────────────
 
 def _scan_claude_files() -> dict:
@@ -179,70 +229,34 @@ def _decode_claude_project_dir(path: Path) -> str:
 
 def _get_claude_cwd(fp: Path) -> str:
     """Return the real cwd recorded by Claude in a session jsonl file."""
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    cwd = rec.get("cwd")
-                    if cwd and Path(cwd).exists():
-                        return cwd
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp, max_bytes=MAX_METADATA_SCAN_BYTES):
+        cwd = rec.get("cwd")
+        if cwd and Path(cwd).exists():
+            return cwd
 
     decoded = _decode_claude_project_dir(fp.parent)
     return decoded if Path(decoded).exists() else str(fp.parent)
 
-
 def _get_claude_ai_title(fp: Path) -> str:
     """Return Claude's generated session title when present."""
     title = ""
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    if rec.get("type") == "ai-title":
-                        ai_title = rec.get("aiTitle") or rec.get("title")
-                        if isinstance(ai_title, str) and ai_title.strip():
-                            title = ai_title.strip()
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp, max_bytes=MAX_METADATA_SCAN_BYTES):
+        if rec.get("type") == "ai-title":
+            ai_title = rec.get("aiTitle") or rec.get("title")
+            if isinstance(ai_title, str) and ai_title.strip():
+                title = ai_title.strip()
     return title
 
-
 def _get_claude_model(fp: Path) -> str:
-    """Return the last Claude model recorded in a session file."""
+    """Return the last Claude model found in a bounded metadata scan."""
     model = ""
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    message = rec.get("message")
-                    if rec.get("type") == "assistant" and isinstance(message, dict):
-                        value = message.get("model")
-                        if isinstance(value, str) and value.strip():
-                            model = value.strip()
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp, max_bytes=MAX_METADATA_SCAN_BYTES):
+        message = rec.get("message")
+        if rec.get("type") == "assistant" and isinstance(message, dict):
+            value = message.get("model")
+            if isinstance(value, str) and value.strip():
+                model = value.strip()
     return model
-
 
 def model_group_label(source: str, model: str = "") -> str:
     model = (model or "").strip()
@@ -334,13 +348,14 @@ def load_claude_sessions() -> list:
     for sid, fp in file_index.items():
         ai_title = _get_claude_ai_title(fp)
         model = _get_claude_model(fp)
+        cwd = _get_claude_cwd(fp)
         entry = dict(history[sid]) if sid in history else {
             "sessionId": sid,
-            "project": _get_claude_cwd(fp),
+            "project": cwd,
             "display": "",
             "timestamp": int(fp.stat().st_mtime * 1000),
         }
-        entry["project"] = _get_claude_cwd(fp)
+        entry["project"] = cwd
         if ai_title:
             entry["display"] = ai_title
         entry["_file"] = str(fp)
@@ -368,49 +383,24 @@ def get_claude_preview(session: dict):
     if not fp or not fp.exists():
         return None, None, 0, {}
 
-    user_messages = []
-    last_prompt = ""
+    first = None
+    last = None
+    count = 0
     tokens = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    if rec.get("type") == "last-prompt":
-                        prompt = rec.get("lastPrompt")
-                        if (
-                                isinstance(prompt, str)
-                                and prompt.strip()
-                                and not _looks_like_claude_transcript_context(prompt)):
-                            last_prompt = prompt.strip()
-                    elif rec.get("type") == "user":
-                        text = _extract_claude_human_prompt(rec)
-                        if text:
-                            user_messages.append(text)
-                    elif (rec.get("type") == "assistant"
-                            and isinstance(rec.get("message"), dict)):
-                        usage = rec["message"].get("usage", {})
-                        if usage:
-                            tokens["input"] += usage.get("input_tokens", 0)
-                            tokens["output"] += usage.get("output_tokens", 0)
-                            tokens["cache_read"] += usage.get("cache_read_input_tokens", 0)
-                            tokens["cache_write"] += usage.get("cache_creation_input_tokens", 0)
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp):
+        text = _extract_claude_human_prompt(rec)
+        if text:
+            first, last, count = _remember_first_last(first, last, count, text)
+            continue
+        if rec.get("type") == "assistant" and isinstance(rec.get("message"), dict):
+            usage = rec["message"].get("usage", {})
+            if usage:
+                tokens["input"] += usage.get("input_tokens", 0)
+                tokens["output"] += usage.get("output_tokens", 0)
+                tokens["cache_read"] += usage.get("cache_read_input_tokens", 0)
+                tokens["cache_write"] += usage.get("cache_creation_input_tokens", 0)
 
-    first = user_messages[0] if user_messages else None
-    last = last_prompt or (user_messages[-1] if len(user_messages) > 1 else None)
-    if first and last == first:
-        last = None
-    return first, last, len(user_messages), tokens
-
-
-# ── Codex helpers ────────────────────────────────────────────────────────────
+    return first, last, count, tokens
 
 def _find_codex_exe() -> str:
     """Return path to the Codex Desktop exe, or empty string if not found."""
@@ -471,28 +461,17 @@ def _start_cmd(cwd: str, command: str):
 
 def _get_codex_first_message(fp: Path) -> str:
     """Return the first non-system user message text from a Codex session file."""
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    if rec.get("type") == "response_item":
-                        payload = rec.get("payload", {})
-                        if (isinstance(payload, dict)
-                                and payload.get("type") == "message"
-                                and payload.get("role") == "user"):
-                            for part in payload.get("content", []):
-                                if isinstance(part, dict) and part.get("type") == "input_text":
-                                    text = part.get("text", "").strip()
-                                    if _is_human_codex_text(text):
-                                        return text
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp, max_bytes=MAX_METADATA_SCAN_BYTES):
+        if rec.get("type") == "response_item":
+            payload = rec.get("payload", {})
+            if (isinstance(payload, dict)
+                    and payload.get("type") == "message"
+                    and payload.get("role") == "user"):
+                for part in payload.get("content", []):
+                    if isinstance(part, dict) and part.get("type") == "input_text":
+                        text = part.get("text", "").strip()
+                        if _is_human_codex_text(text):
+                            return _clip_preview_text(text)
     return ""
 
 
@@ -518,38 +497,26 @@ def _clean_display_text(text: str) -> str:
     text = (text or "").strip()
     if not _is_human_codex_text(text):
         return ""
-    return " ".join(text.split())
+    return _clip_preview_text(text)
 
 
 # ── Codex session loading ─────────────────────────────────────────────────────
 
 def _get_codex_model(fp: Path) -> str:
-    """Return the last Codex/OpenAI model recorded in a rollout file."""
+    """Return the last Codex/OpenAI model found in a bounded metadata scan."""
     model = ""
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    payload = rec.get("payload")
-                    if not isinstance(payload, dict):
-                        continue
-                    value = payload.get("model")
-                    if isinstance(value, str) and value.strip():
-                        model = value.strip()
-                    settings = payload.get("collaboration_mode", {}).get("settings", {})
-                    value = settings.get("model") if isinstance(settings, dict) else ""
-                    if isinstance(value, str) and value.strip():
-                        model = value.strip()
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp, max_bytes=MAX_METADATA_SCAN_BYTES):
+        payload = rec.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        value = payload.get("model")
+        if isinstance(value, str) and value.strip():
+            model = value.strip()
+        settings = payload.get("collaboration_mode", {}).get("settings", {})
+        value = settings.get("model") if isinstance(settings, dict) else ""
+        if isinstance(value, str) and value.strip():
+            model = value.strip()
     return model
-
 
 def _scan_codex_files() -> dict:
     """Return {sessionId: Path} for every Codex session file on disk."""
@@ -627,68 +594,40 @@ def load_codex_sessions() -> list:
 
 
 def _get_codex_cwd(fp: Path) -> str:
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    if rec.get("type") == "turn_context":
-                        return rec.get("payload", {}).get("cwd", "")
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for rec in _iter_jsonl_records(fp, max_bytes=MAX_METADATA_SCAN_BYTES):
+        if rec.get("type") == "turn_context":
+            return rec.get("payload", {}).get("cwd", "")
     return ""
-
 
 def get_codex_preview(session: dict):
     fp = Path(session["_file"]) if "_file" in session else None
     if not fp or not fp.exists():
         return None, None, 0, {}
 
-    user_messages = []
+    first = None
+    last = None
+    count = 0
     tokens = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    rtype = rec.get("type")
-                    payload = rec.get("payload", {})
+    for rec in _iter_jsonl_records(fp):
+        rtype = rec.get("type")
+        payload = rec.get("payload", {})
 
-                    if rtype == "response_item" and isinstance(payload, dict):
-                        if (payload.get("type") == "message"
-                                and payload.get("role") == "user"):
-                            for part in payload.get("content", []):
-                                if isinstance(part, dict) and part.get("type") == "input_text":
-                                    text = part.get("text", "").strip()
-                                    if _is_human_codex_text(text):
-                                        user_messages.append(text)
+        if rtype == "response_item" and isinstance(payload, dict):
+            if payload.get("type") == "message" and payload.get("role") == "user":
+                for part in payload.get("content", []):
+                    if isinstance(part, dict) and part.get("type") == "input_text":
+                        text = part.get("text", "").strip()
+                        if _is_human_codex_text(text):
+                            first, last, count = _remember_first_last(first, last, count, text)
+        elif rtype == "event_msg" and isinstance(payload, dict):
+            if payload.get("type") == "token_count":
+                info = payload.get("info") or {}
+                usage = info.get("last_token_usage") or info.get("total_token_usage") or {}
+                tokens["input"] += usage.get("input_tokens", 0)
+                tokens["output"] += usage.get("output_tokens", 0)
+                tokens["cache_read"] += usage.get("cached_input_tokens", 0)
 
-                    elif rtype == "event_msg" and isinstance(payload, dict):
-                        if payload.get("type") == "token_count":
-                            info = payload.get("info") or {}
-                            usage = info.get("last_token_usage") or info.get("total_token_usage") or {}
-                            tokens["input"] += usage.get("input_tokens", 0)
-                            tokens["output"] += usage.get("output_tokens", 0)
-                            tokens["cache_read"] += usage.get("cached_input_tokens", 0)
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
-
-    first = user_messages[0] if user_messages else None
-    last = user_messages[-1] if len(user_messages) > 1 else None
-    return first, last, len(user_messages), tokens
-
-
-# ── Rename / delete helpers ───────────────────────────────────────────────────
+    return first, last, count, tokens
 
 def load_renames() -> dict:
     if RENAMES_FILE.exists():
@@ -792,28 +731,15 @@ def _extract_grok_user_text(content) -> str:
 
 
 def _get_grok_preview_from_chat(fp: Path):
-    user_messages = []
-    try:
-        with open(fp, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if rec.get("type") == "user":
-                    text = _extract_grok_user_text(rec.get("content", ""))
-                    if text:
-                        user_messages.append(text)
-    except OSError:
-        pass
-
-    first = user_messages[0] if user_messages else None
-    last = user_messages[-1] if len(user_messages) > 1 else None
-    return first, last, len(user_messages), {}
-
+    first = None
+    last = None
+    count = 0
+    for rec in _iter_jsonl_records(fp):
+        if rec.get("type") == "user":
+            text = _extract_grok_user_text(rec.get("content", ""))
+            if text:
+                first, last, count = _remember_first_last(first, last, count, text)
+    return first, last, count, {}
 
 def load_grok_sessions() -> list:
     if not GROK_SESSIONS_DIR.exists():
@@ -914,22 +840,153 @@ def open_grok_file(session: dict):
         subprocess.Popen(["notepad.exe", str(fp)])
 
 
+def _read_simple_yaml(fp: Path) -> dict:
+    data = {}
+    try:
+        with open(fp, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or ":" not in stripped:
+                    continue
+                key, value = stripped.split(":", 1)
+                data[key.strip()] = value.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return data
+
+
+def _extract_copilot_user_text(rec: dict) -> str:
+    if rec.get("type") != "user.message":
+        return ""
+    data = rec.get("data", {})
+    if not isinstance(data, dict):
+        return ""
+    text = data.get("content", "")
+    if not isinstance(text, str):
+        return ""
+    if "<current_datetime>" in text:
+        parts = text.split("\n\n", 1)
+        text = parts[1] if len(parts) > 1 else text
+    if "<system_reminder>" in text:
+        text = text.split("<system_reminder>", 1)[0]
+    return text.strip()
+
+
+def _get_copilot_preview_from_events(fp: Path, max_bytes: int | None = None):
+    first = None
+    last = None
+    count = 0
+    model = ""
+    for rec in _iter_jsonl_records(fp, max_bytes=max_bytes):
+        if rec.get("type") == "session.model_change":
+            data = rec.get("data", {})
+            if isinstance(data, dict) and data.get("newModel"):
+                model = str(data.get("newModel", "")).strip()
+        elif rec.get("type") == "assistant.message":
+            data = rec.get("data", {})
+            if isinstance(data, dict) and data.get("model"):
+                model = str(data.get("model", "")).strip()
+        text = _extract_copilot_user_text(rec)
+        if text:
+            first, last, count = _remember_first_last(first, last, count, text)
+
+    return first, last, count, {}, model
+
+def load_copilot_sessions() -> list:
+    if not COPILOT_SESSIONS_DIR.exists():
+        return []
+
+    entries = []
+    for session_dir in COPILOT_SESSIONS_DIR.iterdir():
+        if not session_dir.is_dir():
+            continue
+        sid = session_dir.name
+        if len(sid) != 36 or sid.count("-") != 4:
+            continue
+
+        workspace_file = session_dir / "workspace.yaml"
+        events_file = session_dir / "events.jsonl"
+        if not workspace_file.exists():
+            continue
+
+        workspace = _read_simple_yaml(workspace_file)
+        cwd = workspace.get("cwd", "")
+        display = workspace.get("name", "")
+        model = ""
+        count = 0
+        if events_file.exists():
+            first, _, count, _, model = _get_copilot_preview_from_events(events_file)
+            if not display:
+                display = first or ""
+
+        ts = (
+            _parse_iso_ms(workspace.get("updated_at", ""))
+            or _parse_iso_ms(workspace.get("created_at", ""))
+            or int(session_dir.stat().st_mtime * 1000)
+        )
+
+        entries.append({
+            "sessionId": sid,
+            "project": cwd,
+            "display": display,
+            "timestamp": ts,
+            "model": model or "Copilot",
+            "model_group": f"Copilot / {model}" if model else "Copilot / Unknown",
+            "_file": str(events_file if events_file.exists() else workspace_file),
+            "_session_dir": str(session_dir),
+            "_source": "copilot",
+            "_resumable": True,
+            "_message_count": count,
+        })
+
+    return entries
+
+
+def get_copilot_preview(session: dict):
+    fp = Path(session["_file"]) if "_file" in session else None
+    if not fp or not fp.exists():
+        return None, None, 0, {}
+    if fp.name == "events.jsonl":
+        first, last, count, tokens, _model = _get_copilot_preview_from_events(fp)
+        return first, last, count, tokens
+    text = fp.read_text(encoding="utf-8", errors="replace").strip()
+    return text[:4000], None, session.get("_message_count", 0), {}
+
+
+def delete_copilot_session(session: dict):
+    session_dir = Path(session.get("_session_dir", ""))
+    if session_dir.exists() and session_dir.is_dir():
+        try:
+            shutil.rmtree(session_dir)
+        except OSError:
+            pass
+
+
+def resume_copilot(project: str, sid: str):
+    cwd = project or str(Path.home())
+    command = f"gh copilot -- -C {_ps_single_quote(cwd)} --resume={_ps_single_quote(sid)}"
+    _start_powershell(cwd, command)
+
+
 SESSION_LOADERS = {
     "claude": load_claude_sessions,
     "codex": load_codex_sessions,
     "grok": load_grok_sessions,
+    "copilot": load_copilot_sessions,
 }
 
 PREVIEW_LOADERS = {
     "claude": get_claude_preview,
     "codex": get_codex_preview,
     "grok": get_grok_preview,
+    "copilot": get_copilot_preview,
 }
 
 DELETE_HANDLERS = {
     "claude": delete_claude_session,
     "codex": delete_codex_session,
     "grok": delete_grok_session,
+    "copilot": delete_copilot_session,
 }
 
 
@@ -1012,6 +1069,7 @@ RESUME_HANDLERS = {
     "claude": resume_claude,
     "codex": resume_codex,
     "grok": resume_grok,
+    "copilot": resume_copilot,
 }
 
 
@@ -1027,6 +1085,10 @@ class SessionPortal:
         self.filtered_sessions: list = []
         self.sort_var = tk.StringVar(value="Newest")
         self.source_var = tk.StringVar(value="All Models")
+        self.date_from_var = tk.StringVar()
+        self.date_to_var = tk.StringVar()
+        self.auto_scan_var = tk.BooleanVar(value=bool(self.settings.get("auto_scan_enabled", True)))
+        self._auto_scan_after_id = None
         self._delete_mode = False
         self._checked_ids: set = set()
 
@@ -1034,6 +1096,7 @@ class SessionPortal:
         self._ensure_onboarding()
         self._build_ui_modern()
         self._load_data()
+        self._schedule_auto_scan()
         self.root.deiconify()
         self.root.lift()
 
@@ -1182,7 +1245,7 @@ class SessionPortal:
         ctk.set_default_color_theme("blue")
         palette = APP_PALETTE
         self.font_family = "Consolas"
-        self.font_size = 10
+        self.font_size = 11
 
         self.bg = palette["bg"]
         self.bg_deep = palette["bg_deep"]
@@ -1192,11 +1255,12 @@ class SessionPortal:
         self.bar = palette["bar"]
         self.muted = palette["muted"]
         self.text = palette["text"]
-        self.blue = "#89b4fa"
-        self.green = "#a6e3a1"
-        self.yellow = "#f9e2af"
-        self.pink = "#ff99cc"
-        self.danger = "#f38ba8"
+        self.blue = "#9fc5ff"
+        self.green = "#b8f7b3"
+        self.yellow = "#ffe7a3"
+        self.pink = "#ff7ad9"
+        self.purple = "#d8b4ff"
+        self.danger = "#ff4d6d"
         self.root.configure(bg=self.bg)
 
         style = ttk.Style()
@@ -1347,6 +1411,21 @@ class SessionPortal:
             command=self._load_data,
         ).pack(fill=tk.X, padx=14, pady=3)
 
+        self.auto_scan_btn = ctk.CTkButton(
+            sidebar,
+            text="Auto Scan: ON" if self.auto_scan_var.get() else "Auto Scan: OFF",
+            anchor="w",
+            height=34,
+            corner_radius=6,
+            fg_color=self.surface_2,
+            hover_color=self.overlay,
+            text_color=self.text,
+            font=self._font(1),
+            command=self._toggle_auto_scan,
+        )
+        self.auto_scan_btn.pack(fill=tk.X, padx=14, pady=3)
+        self._refresh_auto_scan_button()
+
         workspace = ctk.CTkFrame(app, fg_color=self.bg, corner_radius=0)
         workspace.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -1367,9 +1446,14 @@ class SessionPortal:
 
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", self._on_search)
+        self.date_from_var.trace_add("write", self._on_search)
+        self.date_to_var.trace_add("write", self._on_search)
+        self.date_from_var.trace_add("write", lambda *_: self._refresh_date_buttons())
+        self.date_to_var.trace_add("write", lambda *_: self._refresh_date_buttons())
         self.search_entry = ctk.CTkEntry(
             top,
             textvariable=self.search_var,
+            width=520,
             height=38,
             corner_radius=6,
             fg_color=self.surface,
@@ -1381,6 +1465,20 @@ class SessionPortal:
         )
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         self.search_entry.focus()
+
+        self.date_range_btn = ctk.CTkButton(
+            top,
+            text="Dates: Any",
+            width=164,
+            height=38,
+            corner_radius=6,
+            fg_color=self.surface,
+            text_color=self.text,
+            hover_color=self.overlay,
+            font=self._font(weight="bold"),
+            command=self._open_date_range_picker,
+        )
+        self.date_range_btn.pack(side=tk.LEFT, padx=(0, 10))
 
         sort_menu = ctk.CTkOptionMenu(
             top,
@@ -1506,6 +1604,7 @@ class SessionPortal:
         self.tree.tag_configure("gone", foreground=self.muted)
         self.tree.tag_configure("codex", foreground=self.yellow)
         self.tree.tag_configure("grok", foreground=self.pink)
+        self.tree.tag_configure("copilot", foreground=self.purple)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -1549,16 +1648,17 @@ class SessionPortal:
         self.preview.tag_configure("message", foreground=self.green)
         self.preview.tag_configure("codex", foreground=self.yellow)
         self.preview.tag_configure("grok", foreground=self.pink)
+        self.preview.tag_configure("copilot", foreground=self.purple)
 
         btn_frame = ctk.CTkFrame(right, fg_color=self.bg, corner_radius=0)
         btn_frame.pack(fill=tk.X)
         self.action_btn = ctk.CTkButton(
             btn_frame,
             text="Resume Session",
-            fg_color=self.blue,
-            hover_color="#b7cdfd",
-            text_color="#050816",
-            text_color_disabled="#dbe7ff",
+            fg_color=self.green,
+            hover_color="#c8f7c5",
+            text_color="#000000",
+            text_color_disabled="#000000",
             font=self._font(1, "bold"),
             corner_radius=6,
             height=40,
@@ -1573,7 +1673,7 @@ class SessionPortal:
             fg_color=self.surface_2,
             hover_color=self.overlay,
             text_color=self.text,
-            text_color_disabled="#cdd6f4",
+            text_color_disabled="#f2f5ff",
             font=self._font(weight="bold"),
             corner_radius=6,
             height=40,
@@ -1586,9 +1686,9 @@ class SessionPortal:
             btn_frame,
             text="Delete",
             fg_color=self.danger,
-            hover_color="#ff9ab3",
-            text_color="#050816",
-            text_color_disabled="#fff0f5",
+            hover_color="#ff7a90",
+            text_color="#ffffff",
+            text_color_disabled="#ffffff",
             font=self._font(weight="bold"),
             corner_radius=6,
             height=40,
@@ -1612,6 +1712,7 @@ class SessionPortal:
         self.root.bind("q", lambda e: self.root.quit())
         self.root.bind("<Escape>", lambda e: self._exit_delete_mode() if self._delete_mode else None)
         self._refresh_source_buttons()
+        self._refresh_date_buttons()
 
     def _build_ui(self):
         header = tk.Frame(self.root, bg=self.bar, pady=9, padx=14)
@@ -1903,13 +2004,58 @@ class SessionPortal:
 
     def _load_data(self):
         self.settings = load_settings()
+        self.auto_scan_var.set(bool(self.settings.get("auto_scan_enabled", True)))
         self.all_sessions = load_sessions(self.settings)
         self._build_source_buttons()
         self._apply_filter()
+        self._refresh_auto_scan_button()
 
     def _edit_sources(self):
         self._show_onboarding(first_run=False)
         self._load_data()
+
+    def _toggle_auto_scan(self):
+        enabled = not self.auto_scan_var.get()
+        self.auto_scan_var.set(enabled)
+        self.settings["auto_scan_enabled"] = enabled
+        save_settings(self.settings)
+        self._refresh_auto_scan_button()
+        if enabled:
+            self._auto_scan()
+        elif self._auto_scan_after_id:
+            self.root.after_cancel(self._auto_scan_after_id)
+            self._auto_scan_after_id = None
+
+    def _refresh_auto_scan_button(self):
+        if not hasattr(self, "auto_scan_btn"):
+            return
+        enabled = self.auto_scan_var.get()
+        self.auto_scan_btn.configure(
+            text="Auto Scan: ON" if enabled else "Auto Scan: OFF",
+            fg_color=self.blue if enabled else self.surface_2,
+            text_color=self.bg_deep if enabled else self.text,
+            hover_color=self.blue if enabled else self.overlay,
+        )
+
+    def _schedule_auto_scan(self):
+        if self._auto_scan_after_id:
+            self.root.after_cancel(self._auto_scan_after_id)
+            self._auto_scan_after_id = None
+        if not self.auto_scan_var.get():
+            return
+        interval = int(self.settings.get("auto_scan_interval_ms", 15000) or 15000)
+        self._auto_scan_after_id = self.root.after(max(5000, interval), self._auto_scan)
+
+    def _auto_scan(self):
+        self._auto_scan_after_id = None
+        try:
+            if not self._delete_mode:
+                selected = self.tree.selection()[0] if hasattr(self, "tree") and self.tree.selection() else ""
+                self._load_data()
+                if selected and selected in self.tree.get_children():
+                    self.tree.selection_set(selected)
+        finally:
+            self._schedule_auto_scan()
 
     def _on_search(self, *_):
         self._apply_filter()
@@ -1918,9 +2064,254 @@ class SessionPortal:
         self.sort_var.set(ascending if self.sort_var.get() == descending else descending)
         self._apply_filter()
 
+    def _parse_date_filter(self, value: str, end_of_day: bool = False):
+        value = value.strip()
+        if not value:
+            return None
+        try:
+            dt = datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            return None
+        if end_of_day:
+            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999000)
+        return int(dt.timestamp() * 1000)
+
+    def _refresh_date_buttons(self):
+        if hasattr(self, "date_range_btn"):
+            start = self.date_from_var.get() or "Any"
+            end = self.date_to_var.get() or "Any"
+            text = "Dates: Any" if start == "Any" and end == "Any" else "Dates: Custom"
+            self.date_range_btn.configure(text=text)
+
+    def _open_date_range_picker(self):
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Choose Date Range")
+        dialog.configure(bg=self.bg)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+
+        body = tk.Frame(dialog, bg=self.bg, padx=16, pady=16)
+        body.pack(fill=tk.BOTH, expand=True)
+        tk.Label(
+            body,
+            text="Date Range",
+            bg=self.bg,
+            fg=self.text,
+            font=self._font(2, "bold"),
+        ).pack(anchor="w", pady=(0, 10))
+
+        start_value = tk.StringVar(value=self.date_from_var.get() or "Any")
+        end_value = tk.StringVar(value=self.date_to_var.get() or "Any")
+        active_target = tk.StringVar(value="from")
+
+        def sync_labels():
+            start_value.set(self.date_from_var.get() or "Any")
+            end_value.set(self.date_to_var.get() or "Any")
+
+        month_seed = self.date_from_var.get() or self.date_to_var.get()
+        try:
+            seed_date = datetime.strptime(month_seed, "%Y-%m-%d")
+        except ValueError:
+            seed_date = datetime.now()
+        month_var = tk.IntVar(value=seed_date.month)
+        year_var = tk.IntVar(value=seed_date.year)
+
+        def row(label: str, value_var: tk.StringVar, target_name: str):
+            frame = tk.Frame(body, bg=self.surface, padx=10, pady=8)
+            frame.pack(fill=tk.X, pady=4)
+            tk.Label(
+                frame,
+                text=label,
+                bg=self.surface,
+                fg=self.blue,
+                font=self._font(weight="bold"),
+                width=8,
+                anchor="w",
+            ).pack(side=tk.LEFT)
+            tk.Label(
+                frame,
+                textvariable=value_var,
+                bg=self.surface,
+                fg=self.text,
+                font=self._font(weight="bold"),
+                width=12,
+                anchor="w",
+            ).pack(side=tk.LEFT, padx=(8, 10))
+            tk.Button(
+                frame,
+                text="Select",
+                bg=self.overlay,
+                fg=self.text,
+                activebackground=self.surface_2,
+                activeforeground=self.text,
+                relief=tk.FLAT,
+                padx=12,
+                command=lambda: (active_target.set(target_name), render_calendar()),
+            ).pack(side=tk.RIGHT)
+
+        row("From", start_value, "from")
+        row("To", end_value, "to")
+
+        calendar_panel = tk.Frame(body, bg=self.bg)
+        calendar_panel.pack(fill=tk.X, pady=(10, 0))
+        calendar_header = tk.Frame(calendar_panel, bg=self.bg)
+        calendar_header.pack(fill=tk.X, pady=(0, 8))
+        active_label = tk.Label(
+            calendar_header,
+            text="",
+            bg=self.bg,
+            fg=self.blue,
+            font=self._font(weight="bold"),
+            anchor="w",
+        )
+        active_label.pack(side=tk.LEFT)
+        month_label = tk.Label(
+            calendar_header,
+            text="",
+            bg=self.bg,
+            fg=self.text,
+            font=self._font(weight="bold"),
+            width=16,
+        )
+        month_label.pack(side=tk.LEFT, expand=True)
+        grid = tk.Frame(calendar_panel, bg=self.bg)
+        grid.pack()
+
+        def shift_month(delta: int):
+            month = month_var.get() + delta
+            year = year_var.get()
+            if month < 1:
+                month = 12
+                year -= 1
+            elif month > 12:
+                month = 1
+                year += 1
+            month_var.set(month)
+            year_var.set(year)
+            render_calendar()
+
+        tk.Button(
+            calendar_header,
+            text="<",
+            bg=self.surface,
+            fg=self.text,
+            activebackground=self.overlay,
+            activeforeground=self.text,
+            relief=tk.FLAT,
+            width=4,
+            command=lambda: shift_month(-1),
+        ).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Button(
+            calendar_header,
+            text=">",
+            bg=self.surface,
+            fg=self.text,
+            activebackground=self.overlay,
+            activeforeground=self.text,
+            relief=tk.FLAT,
+            width=4,
+            command=lambda: shift_month(1),
+        ).pack(side=tk.LEFT)
+
+        def choose_day(day: int):
+            value = f"{year_var.get():04d}-{month_var.get():02d}-{day:02d}"
+            if active_target.get() == "from":
+                self.date_from_var.set(value)
+                active_target.set("to")
+            else:
+                self.date_to_var.set(value)
+            sync_labels()
+            render_calendar()
+
+        def render_calendar():
+            for child in grid.winfo_children():
+                child.destroy()
+            year = year_var.get()
+            month = month_var.get()
+            active_label.config(text=f"Choosing {'From' if active_target.get() == 'from' else 'To'}")
+            month_label.config(text=f"{calendar.month_name[month]} {year}")
+            selected_value = self.date_from_var.get() if active_target.get() == "from" else self.date_to_var.get()
+            for col, day_name in enumerate(("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")):
+                tk.Label(
+                    grid,
+                    text=day_name,
+                    bg=self.bg,
+                    fg=self.blue,
+                    font=self._font(-1, "bold"),
+                    width=4,
+                ).grid(row=0, column=col, padx=2, pady=(0, 4))
+            for row_index, week in enumerate(calendar.monthcalendar(year, month), start=1):
+                for col, day in enumerate(week):
+                    if not day:
+                        tk.Label(grid, text="", bg=self.bg, width=4).grid(row=row_index, column=col, padx=2, pady=2)
+                        continue
+                    date_value = f"{year:04d}-{month:02d}-{day:02d}"
+                    is_selected = selected_value == date_value
+                    tk.Button(
+                        grid,
+                        text=str(day),
+                        bg=self.blue if is_selected else self.surface,
+                        fg=self.bg_deep if is_selected else self.text,
+                        activebackground=self.overlay,
+                        activeforeground=self.text,
+                        relief=tk.FLAT,
+                        width=4,
+                        command=lambda value=day: choose_day(value),
+                    ).grid(row=row_index, column=col, padx=2, pady=2)
+
+        footer = tk.Frame(body, bg=self.bg)
+        footer.pack(fill=tk.X, pady=(12, 0))
+        tk.Button(
+            footer,
+            text="Clear Dates",
+            bg=self.surface_2,
+            fg=self.text,
+            activebackground=self.overlay,
+            activeforeground=self.text,
+            relief=tk.FLAT,
+            padx=12,
+            command=lambda: (self._clear_date_filter(), sync_labels(), render_calendar()),
+        ).pack(side=tk.LEFT)
+        tk.Button(
+            footer,
+            text="Done",
+            bg=self.green,
+            fg="#000000",
+            activebackground="#c8f7c5",
+            activeforeground="#000000",
+            relief=tk.FLAT,
+            padx=16,
+            command=dialog.destroy,
+        ).pack(side=tk.RIGHT)
+
+        render_calendar()
+        dialog.update_idletasks()
+        if hasattr(self, "date_range_btn"):
+            anchor = self.date_range_btn
+            x = anchor.winfo_rootx()
+            y = anchor.winfo_rooty() + anchor.winfo_height() + 6
+            screen_width = self.root.winfo_screenwidth()
+            if x + dialog.winfo_width() > screen_width - 12:
+                x = max(12, screen_width - dialog.winfo_width() - 12)
+        else:
+            x = self.root.winfo_x() + max(80, (self.root.winfo_width() - dialog.winfo_width()) // 2)
+            y = self.root.winfo_y() + 120
+        dialog.geometry(f"+{x}+{y}")
+        dialog.wait_window()
+
+    def _clear_date_filter(self):
+        self.date_from_var.set("")
+        self.date_to_var.set("")
+        self._apply_filter()
+
     def _apply_filter(self):
         source_filter = self.source_var.get()
         query = self.search_var.get().lower()
+        from_ms = self._parse_date_filter(self.date_from_var.get())
+        to_ms = self._parse_date_filter(self.date_to_var.get(), end_of_day=True)
+        if from_ms is not None and to_ms is not None and from_ms > to_ms:
+            from_ms, to_ms = to_ms, from_ms
 
         pool = self.all_sessions
 
@@ -1933,6 +2324,10 @@ class SessionPortal:
                 if query in s.get("project", "").lower()
                 or query in s.get("display", "").lower()
             ]
+        if from_ms is not None:
+            pool = [s for s in pool if s.get("timestamp", 0) >= from_ms]
+        if to_ms is not None:
+            pool = [s for s in pool if s.get("timestamp", 0) <= to_ms]
 
         sort = self.sort_var.get()
         if sort.startswith("Newest") or sort.startswith("Date"):
@@ -1984,6 +2379,8 @@ class SessionPortal:
                 tag = ("grok",)
             elif src == "codex":
                 tag = ("codex",)
+            elif src == "copilot":
+                tag = ("copilot",)
             else:
                 tag = ()
 
@@ -2007,17 +2404,20 @@ class SessionPortal:
 
         src = session.get("_source", "claude")
         if src == "grok":
-            self.action_btn.configure(text="Resume Grok", fg_color=self.pink,
-                                      text_color=self.bg_deep, state=tk.NORMAL)
+            self.action_btn.configure(text="Resume Grok", fg_color=self.green,
+                                      text_color="#000000", state=tk.NORMAL)
+        elif src == "copilot":
+            self.action_btn.configure(text="Resume Copilot", fg_color=self.green,
+                                      text_color="#000000", state=tk.NORMAL)
         elif src == "codex":
-            self.action_btn.configure(text="Resume Codex", fg_color=self.yellow,
-                                      text_color=self.bg_deep, state=tk.NORMAL)
+            self.action_btn.configure(text="Resume Codex", fg_color=self.green,
+                                      text_color="#000000", state=tk.NORMAL)
         elif src == "claude":
-            self.action_btn.configure(text="Resume Session", fg_color=self.blue,
-                                      text_color=self.bg_deep, state=tk.NORMAL)
+            self.action_btn.configure(text="Resume Session", fg_color=self.green,
+                                      text_color="#000000", state=tk.NORMAL)
         else:
-            self.action_btn.configure(text=f"Resume {provider_label(src)}", fg_color=self.blue,
-                                      text_color=self.bg_deep, state=tk.NORMAL if src in RESUME_HANDLERS else tk.DISABLED)
+            self.action_btn.configure(text=f"Resume {provider_label(src)}", fg_color=self.green,
+                                      text_color="#000000", state=tk.NORMAL if src in RESUME_HANDLERS else tk.DISABLED)
         self.rename_btn.configure(state=tk.NORMAL)
         self.delete_btn.configure(state=tk.NORMAL)
 
@@ -2030,6 +2430,8 @@ class SessionPortal:
         src = session.get("_source", "claude")
         if src == "grok":
             src_tag = "grok"
+        elif src == "copilot":
+            src_tag = "copilot"
         elif src == "codex":
             src_tag = "codex"
         else:

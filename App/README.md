@@ -1,13 +1,13 @@
 # Session Portal App
 
-Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude, Codex, and Grok sessions on this machine. It uses a CustomTkinter shell and only shows sessions that can be resumed.
+Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude, Codex, Grok, and GitHub Copilot CLI sessions on this machine. It uses a CustomTkinter shell and only shows sessions that can be resumed.
 
 ## Terminology
 
 - **Session**: a resumable local conversation or work state. Each row in the app is a session.
 - **Thread**: the conversation title or prompt shown for a session.
 - **Model**: the AI engine recorded in the session file, such as `gpt-5.5`, `grok-composer-2.5-fast`, or `glm-5.2`.
-- **Provider**: the local tool that created the session, such as Claude, Codex, or Grok.
+- **Provider**: the local tool that created the session, such as Claude, Codex, Grok, or GitHub Copilot CLI.
 
 ## Launch
 
@@ -49,6 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Claude sessions from `%USERPROFILE%\.claude`
 - Codex sessions from `%USERPROFILE%\.codex`
 - Grok sessions from `%USERPROFILE%\.grok\sessions`
+- GitHub Copilot CLI sessions from `%USERPROFILE%\.copilot\session-state`
 - Generated titles when available
 - Project folders where sessions were originally run
 - Actual model names from session files when available
@@ -61,7 +62,9 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Choose enabled providers during first-run onboarding
 - See other detected local AI tools during onboarding when session resume support is not available yet
 - Search sessions by project or title
-- Filter by All Models, Claude, Codex, or Grok
+- Filter sessions by activity date range with the compact Dates calendar button
+- Filter by All Models, Claude, Codex, Grok, or Copilot
+- Toggle Auto Scan to keep supported session discovery fresh while the app is open
 - Reopen provider selection later with the Scan Sources button
 - Sort by date, model, project, or prompt/title from the sort menu or by clicking table headers
 - Use the left provider sidebar, top search/sort rail, numbered sessions table, and right inspector layout
@@ -69,8 +72,25 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Scroll long inspector previews independently in the right panel
 - Resume a session in its recorded working directory with the terminal opened maximized
 - Resume Grok sessions with `grok --resume <session-id>`
+- Resume Copilot sessions with `gh copilot -- --resume=<session-id>`
 - Rename sessions locally
 - Delete selected sessions
+
+## Use Flow
+
+1. Launch `Codebase/session_portal.pyw`.
+2. On first launch, choose which providers to scan and click Save.
+3. Use the left sidebar to filter all sessions or one provider.
+4. Use the search box to find a project, title, or prompt.
+5. Use the Dates calendar button to filter by last activity date when needed.
+6. Click table headers or the sort menu to change ordering.
+7. Select a row to inspect metadata and first/last prompt.
+8. Double-click, press Enter, or click the resume button to reopen the session in a maximized terminal.
+9. Use Rename to store a local display name in `Codebase/renames.json`.
+10. Use Delete to enter delete mode, select one or more rows, click Delete Selected, and confirm the warning dialog.
+11. Use Esc or Cancel to leave delete mode without deleting.
+
+Auto Scan refreshes provider/session discovery every 60 seconds by default. The sidebar toggle can turn it off when the user wants only manual Refresh behavior. Manual Refresh is used when the user wants new sessions, renamed rows, deleted rows, or changed provider choices to appear immediately.
 
 ## Codebase
 
@@ -101,16 +121,18 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Inspector action buttons use the same rounded CustomTkinter style as the sidebar controls.
 - Inspector action buttons use high-contrast enabled and disabled text colors for readability.
 - Sidebar shortcut text is hidden; inspector metadata labels use compact alignment.
-- Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, and Grok.
+- Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, Grok, and Copilot.
 - The inspector preview has its own scrollbar for long prompts or context.
 - Session launch helpers suppress intermediate helper-console flashes while still opening the real terminal window.
 - Session launch helpers request maximized terminal windows for resumed sessions.
 - First launch opens provider onboarding so the user can choose which local tools to scan. Saved choices are reused on later launches.
 - Provider discovery is dynamic for the current Windows user and resolves local session folders from `%USERPROFILE%`.
+- Auto Scan reruns provider/session discovery every 60 seconds by default and can be toggled from the sidebar.
+- Session scanning uses bounded metadata reads so large JSONL histories do not stay in memory during refresh.
 - Sidebar filters are generated from enabled/detected supported providers instead of a fixed source list.
 - Other common local AI tools are detected during onboarding, but only providers with session loaders appear in the resumable session list.
 - Resume fallback behavior uses the current user's home folder when a session does not have a valid recorded project path.
-- Scan Sources controls which local tools/folders are scanned; All Models, Claude, Codex, and Grok are filters for already discovered session rows.
+- Scan Sources controls which local tools/folders are scanned; All Models, Claude, Codex, Grok, and Copilot are filters for already discovered session rows.
 - Non-resumable rows are excluded from the list, including cleaned-up history-only records and missing session files.
 - Restart the app after code edits; the Refresh button reloads session data, not Python source code.
 - The app intentionally hides model inventory, model-group controls, memory sections, and non-resumable prompt-history rows.

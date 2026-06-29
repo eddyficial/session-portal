@@ -7,6 +7,7 @@ The app discovers supported resumable sessions dynamically from the signed-in us
 - Claude: `%USERPROFILE%\.claude`
 - Codex: `%USERPROFILE%\.codex`
 - Grok: `%USERPROFILE%\.grok`
+- GitHub Copilot CLI: `%USERPROFILE%\.copilot`
 
 No API service is required. Session Portal reads local session files and opens resumable sessions in their recorded working directories.
 If a session does not have a valid recorded working directory, Session Portal falls back to the current user's home folder.
@@ -18,7 +19,7 @@ Onboarding also checks for other common local AI tools, such as Cursor, Windsurf
 - **Session**: a resumable local conversation or work state. Each row in the app is a session.
 - **Thread**: the conversation title or prompt shown for a session.
 - **Model**: the AI engine recorded in the session file, such as `gpt-5.5`, `grok-composer-2.5-fast`, or `glm-5.2`.
-- **Provider**: the local tool that created the session, such as Claude, Codex, or Grok.
+- **Provider**: the local tool that created the session, such as Claude, Codex, Grok, or GitHub Copilot CLI.
 
 ## Install
 
@@ -61,7 +62,7 @@ To also remove local Session Portal preferences from the cloned folder:
 powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -RemoveLocalData
 ```
 
-This does not delete Claude, Codex, Grok, or any AI session folders under `%USERPROFILE%`.
+This does not delete Claude, Codex, Grok, Copilot, or any AI session folders under `%USERPROFILE%`.
 
 ## Run
 
@@ -77,14 +78,168 @@ Or run the main script:
 py -3 .\Codebase\session_portal.py
 ```
 
+## First Launch
+
+1. Start the app with `pyw .\Codebase\session_portal.pyw`.
+2. Choose which providers Session Portal should scan.
+3. Leave detected providers checked if you want their sessions in the app.
+4. Click **Save**.
+
+You can reopen this provider selection later with **Scan Sources** in the left sidebar.
+
+## How To Use
+
+### Browse Sessions
+
+Each row in the table is one resumable session. The table shows:
+
+- `#`: row number in the current filtered/sorted list
+- `Model`: recorded model or provider fallback
+- `Project`: folder name where the session was originally run
+- `Date`: last known session activity
+- `Thread / Last Prompt`: generated title, thread name, or first useful prompt
+
+Click a row once to show details in the right inspector.
+
+### Search
+
+Use the search box at the top to find sessions by project name, title, or prompt text.
+
+Clear the search box to return to the full list.
+
+### Date Range
+
+Use the **Dates** calendar button to show sessions from a specific period.
+
+1. Click **Dates: Any**.
+2. Choose a **From** date and a **To** date from the popup calendar controls.
+3. Leave either side as **Any** for an open-ended range.
+4. Click **Clear Dates** in the popup to remove the date filter.
+
+The date range uses each session's last known activity date. The top button shows **Dates: Custom** when a date filter is active.
+
+### Filter By Provider
+
+Use the left sidebar buttons:
+
+- **All Models** shows every discovered resumable session.
+- **Claude**, **Codex**, **Grok**, and **Copilot** show only that provider when available.
+
+Provider buttons appear only when the provider is enabled and detected, or when that provider already has sessions loaded.
+
+### Sort
+
+Use the sort menu in the top-right, or click table headers.
+
+Available sorts:
+
+- Newest
+- Oldest
+- Model A-Z
+- Model Z-A
+- Project A-Z
+- Project Z-A
+- Prompt A-Z
+- Prompt Z-A
+
+### Preview A Session
+
+Select any row. The right inspector shows:
+
+- Model
+- Provider
+- Title when available
+- Project path
+- Session ID
+- Date
+- Message count
+- Token count when available
+- First and last useful prompt
+
+Long previews have their own scrollbar.
+
+### Resume A Session
+
+1. Select a session row.
+2. Click **Resume Session**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
+3. Session Portal opens a maximized terminal in the recorded working directory.
+
+You can also double-click a row or press `Enter`.
+
+If the recorded working directory no longer exists, the app falls back to the current user's home folder when possible.
+
+### Rename A Session
+
+1. Select a row.
+2. Click **Rename**.
+3. Enter a new display name.
+4. Click **OK**.
+
+To remove a custom name, open **Rename**, clear the text, and confirm. The original title/prompt will show again.
+
+Renames are saved locally in `Codebase/renames.json`. They do not modify the provider's original session file.
+
+### Delete Sessions
+
+Deleting removes the local session records used by the provider. This cannot be undone.
+
+To delete one session:
+
+1. Select a row.
+2. Click **Delete**.
+3. Confirm delete mode opens with that row selected.
+4. Click **Delete 1 Selected**.
+5. Confirm the warning dialog.
+
+To delete multiple sessions:
+
+1. Click **Delete** or right-click a row and choose a delete option.
+2. In delete mode, click rows to select or unselect them.
+3. Use **Select All** if you want every currently shown row.
+4. Click **Delete N Selected**.
+5. Confirm the warning dialog.
+
+Press `Esc` or click **Cancel** to leave delete mode without deleting.
+
+### Refresh And Auto Scan
+
+- **Refresh** manually reloads provider/session data.
+- **Auto Scan: ON** reloads discovery every 60 seconds while the app is open.
+- Click **Auto Scan: ON/OFF** to toggle automatic scanning.
+
+Auto Scan is useful when you create a new Claude, Codex, Grok, or Copilot session while Session Portal is already open.
+
+Use **Refresh** when:
+
+- You just created or resumed a session and want it to appear immediately.
+- You changed provider choices with **Scan Sources**.
+- A session title, rename, or delete does not appear updated yet.
+- You turned Auto Scan off and want a manual update.
+
+Use **Auto Scan** when:
+
+- You want Session Portal to keep checking for new supported sessions in the background.
+- You are actively working in Claude, Codex, Grok, or Copilot while Session Portal stays open.
+- You do not want to restart the app just to see newly created sessions.
+
+### Keyboard Shortcuts
+
+- `Enter`: resume the selected session
+- Double-click: resume the selected session
+- `r`: refresh sessions
+- `q`: quit
+- `Esc`: cancel delete mode
+
 ## Features
 
 - First-run provider selection for local session providers
 - Dynamic provider discovery based on the current user's installed tools and session folders
 - Sidebar filters are generated from enabled/detected supported providers
 - Search by project or prompt/title
-- Filter by All Models, Claude, Codex, or Grok
+- Filter by activity date range
+- Filter by All Models, Claude, Codex, Grok, or Copilot
 - Sort by newest, oldest, actual model name, project, or prompt/title
+- Auto Scan refreshes supported provider/session discovery while the app is open
 - Preview session metadata plus first/last prompts
 - Scroll long inspector previews independently in the right panel
 - Resume sessions in their original working directory with the terminal opened maximized

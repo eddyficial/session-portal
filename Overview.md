@@ -1,13 +1,13 @@
 # Session Portal
 
-Session Portal is a local CustomTkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude, Codex, and Grok sessions discovered during provider onboarding and only shows rows that can be resumed.
+Session Portal is a local CustomTkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude, Codex, Grok, and GitHub Copilot CLI sessions discovered during provider onboarding and only shows rows that can be resumed.
 
 ## Terminology
 
 - **Session**: a resumable local conversation or work state. Each row in the app is a session.
 - **Thread**: the conversation title or prompt shown for a session.
 - **Model**: the AI engine recorded in the session file, such as `gpt-5.5`, `grok-composer-2.5-fast`, or `glm-5.2`.
-- **Provider**: the local tool that created the session, such as Claude, Codex, or Grok.
+- **Provider**: the local tool that created the session, such as Claude, Codex, Grok, or GitHub Copilot CLI.
 
 ## App
 
@@ -52,19 +52,27 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Claude sessions: `%USERPROFILE%\.claude`
 - Codex sessions: `%USERPROFILE%\.codex`
 - Grok sessions: `%USERPROFILE%\.grok`
+- GitHub Copilot CLI sessions: `%USERPROFILE%\.copilot\session-state`
 - Provider choices: `Codebase/settings.json`
 - Custom display names: `Codebase/renames.json`
 
 ## Behavior Notes
 
 - Resumable Grok session rows launch Grok with `grok --resume`.
+- Resumable Copilot session rows launch GitHub Copilot CLI with `gh copilot -- --resume=<session-id>`.
+- Basic use flow is documented in the public README: launch, choose providers, search/filter/sort, inspect, resume, rename, delete, refresh, and toggle Auto Scan.
+- Delete mode requires explicit row selection plus a confirmation dialog; Esc or Cancel exits without deleting.
 - Non-resumable rows are excluded, including cleaned-up history-only records and missing session files.
 - Session rows are numbered in the current filtered and sorted order for quick reference.
 - The session table uses a singular `Model` column and shows the actual recorded model name when available.
 - Clicking table headers toggles sorting for date, model, project, and prompt/title.
 - Table header hover states keep high-contrast text so sortable columns stay readable.
 - The provider filter uses `All Models` as the combined/default view label.
-- Scan Sources controls which local tools/folders are scanned; All Models, Claude, Codex, and Grok filter the discovered session rows.
+- Scan Sources controls which local tools/folders are scanned; All Models, Claude, Codex, Grok, and Copilot filter the discovered session rows.
+- A compact Dates calendar button opens date-range controls and filters sessions by last known activity date.
+- Auto Scan reruns provider/session discovery every 60 seconds by default and can be toggled from the sidebar.
+- Manual Refresh is documented as the immediate update path for new sessions, changed provider choices, renamed rows, and deleted rows.
+- Session scanning uses bounded metadata reads so large JSONL histories do not stay in memory during refresh.
 - Provider discovery is dynamic for the current Windows user and resolves provider folders from `%USERPROFILE%`.
 - Sidebar filters are generated from enabled/detected supported providers instead of a fixed source list.
 - Other common local AI tools are detected during onboarding, but only providers with session loaders appear in the resumable session list.
@@ -75,7 +83,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Inspector action buttons use the same rounded CustomTkinter style as the sidebar controls.
 - Inspector action buttons use high-contrast enabled and disabled text colors for readability.
 - Sidebar shortcut text is hidden; inspector metadata labels use compact alignment.
-- Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, and Grok.
+- Inspector metadata always renders first and uses one-line sanitized values across Claude, Codex, Grok, and Copilot.
 - The inspector preview has its own scrollbar for long prompts or context.
 - The app launches maximized so the `Thread / Last Prompt` column is visible by default.
 - Model inventory, model-group controls, memory sections, and non-resumable prompt-history rows are intentionally hidden; the app focuses on resumable sessions.
