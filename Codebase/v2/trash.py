@@ -15,10 +15,45 @@ import shutil
 from pathlib import Path
 from datetime import datetime, timezone
 
-from .config import TRASH_DIR
+from .config import (
+    CLAUDE_DIR,
+    CODEX_SESSIONS_DIR,
+    COPILOT_SESSIONS_DIR,
+    GROK_SESSIONS_DIR,
+    PROJECTS_DIR,
+    TRASH_DIR,
+)
 from .models import Session
 
 MANIFEST_FILE = TRASH_DIR / "manifest.json"
+
+ALLOWED_RESTORE_ROOTS = {
+    "claude": [PROJECTS_DIR, CLAUDE_DIR],
+    "codex": [CODEX_SESSIONS_DIR],
+    "grok": [GROK_SESSIONS_DIR],
+    "copilot": [COPILOT_SESSIONS_DIR],
+}
+
+
+def _resolved(path: Path) -> Path:
+    return path.expanduser().resolve(strict=False)
+
+
+def _is_under(path: Path, root: Path) -> bool:
+    try:
+        _resolved(path).relative_to(_resolved(root))
+        return True
+    except ValueError:
+        return False
+
+
+def _is_safe_trash_path(path: Path) -> bool:
+    return _is_under(path, TRASH_DIR)
+
+
+def _is_safe_restore_path(provider: str, path: Path) -> bool:
+    roots = ALLOWED_RESTORE_ROOTS.get(provider, [])
+    return any(_is_under(path, root) for root in roots)
 
 
 def _now_iso() -> str:
@@ -101,8 +136,11 @@ def restore_session(trash_id: str) -> bool:
     entry = next((e for e in entries if e.get("id") == trash_id), None)
     if not entry:
         return False
+    provider = str(entry.get("provider", ""))
     trashed = Path(entry["trashed_path"])
     original = Path(entry["original_path"])
+    if not _is_safe_trash_path(trashed) or not _is_safe_restore_path(provider, original):
+        return False
     if not trashed.exists():
         # Already gone; just drop the manifest entry.
         _save_manifest([e for e in entries if e.get("id") != trash_id])
@@ -131,6 +169,8 @@ def purge_session(trash_id: str) -> bool:
     if not entry:
         return False
     trashed = Path(entry["trashed_path"])
+    if not _is_safe_trash_path(trashed):
+        return False
     if trashed.exists():
         try:
             if trashed.is_dir():
@@ -152,6 +192,8 @@ def empty_trash() -> int:
     count = len(entries)
     for entry in entries:
         trashed = Path(entry.get("trashed_path", ""))
+        if not _is_safe_trash_path(trashed):
+            continue
         if trashed.exists():
             try:
                 if trashed.is_dir():

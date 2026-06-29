@@ -128,6 +128,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Inspector token and cache counts now use compact `M`/`K` formatting so token metadata stays on one line in the right panel.
 - Codex thread viewing now streams the full selected rollout file before applying the bounded render tail. This fixes large-session mismatches where the resumed CLI showed newer final messages than **View Thread**.
 - Selected threads can now be saved as local Markdown audit exports through **Save Audit**. Exports live under `Codebase/v2/audits/`, include metadata plus the readable thread transcript, and are git-ignored by default.
+- Security check on 2026-06-29 found no embedded API keys or secrets in the repo scan. The main hardening change added path-boundary checks around trash restore, purge, empty-trash, and direct Grok/Copilot provider deletes so edited local state cannot move or delete files outside the app trash or expected provider session folders. Static scanner warnings remain only for intentional `Popen` terminal launches that must stay open for resumed chats.
 
 ## Operating Rule
 

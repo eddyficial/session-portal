@@ -15,6 +15,7 @@ from .base import (
     clip_preview_text,
     iter_jsonl_records,
     keep_thread_tail,
+    path_is_under,
     remember_first_last,
 )
 
@@ -192,7 +193,7 @@ class CopilotProvider:
 
     def delete(self, session: Session) -> None:
         session_dir = Path(session.session_dir or "")
-        if session_dir.exists() and session_dir.is_dir():
+        if session_dir.exists() and session_dir.is_dir() and path_is_under(session_dir, COPILOT_SESSIONS_DIR):
             try:
                 shutil.rmtree(session_dir)
             except OSError:

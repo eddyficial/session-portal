@@ -76,6 +76,17 @@ def keep_thread_tail(msgs: list[ThreadMessage], total_chars: int) -> int:
     return total_chars
 
 
+def path_is_under(path: Path, root: Path) -> bool:
+    """Return True when ``path`` resolves inside ``root``."""
+    try:
+        path.expanduser().resolve(strict=False).relative_to(
+            root.expanduser().resolve(strict=False)
+        )
+        return True
+    except ValueError:
+        return False
+
+
 # ── Label helpers (pure) ────────────────────────────────────────────────────
 def model_group_label(source: str, model: str = "") -> str:
     model = (model or "").strip()

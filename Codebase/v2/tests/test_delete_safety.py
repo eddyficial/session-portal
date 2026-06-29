@@ -38,7 +38,7 @@ def test_grok_delete_removes_only_targeted_dir(tmp_path, monkeypatch):
     assert (keep / "summary.json").exists()
 
 
-def test_copilot_delete_removes_only_targeted_dir(tmp_path):
+def test_copilot_delete_removes_only_targeted_dir(tmp_path, monkeypatch):
     keep = tmp_path / "keep"
     gone = tmp_path / "gone"
     keep.mkdir()
@@ -46,11 +46,36 @@ def test_copilot_delete_removes_only_targeted_dir(tmp_path):
     (keep / "workspace.yaml").write_text("name: keep\n", encoding="utf-8")
     (gone / "workspace.yaml").write_text("name: gone\n", encoding="utf-8")
 
+    monkeypatch.setattr(copilot, "COPILOT_SESSIONS_DIR", tmp_path)
     session = _mk("copilot", session_dir=str(gone))
     copilot.CopilotProvider().delete(session)
 
     assert not gone.exists()
     assert keep.exists()
+
+
+def test_grok_delete_rejects_path_outside_session_root(tmp_path, monkeypatch):
+    session_root = tmp_path / "grok-root"
+    outside = tmp_path / "outside"
+    session_root.mkdir()
+    outside.mkdir()
+    monkeypatch.setattr(grok, "GROK_SESSIONS_DIR", session_root)
+
+    grok.GrokProvider().delete(_mk("grok", session_dir=str(outside)))
+
+    assert outside.exists()
+
+
+def test_copilot_delete_rejects_path_outside_session_root(tmp_path, monkeypatch):
+    session_root = tmp_path / "copilot-root"
+    outside = tmp_path / "outside"
+    session_root.mkdir()
+    outside.mkdir()
+    monkeypatch.setattr(copilot, "COPILOT_SESSIONS_DIR", session_root)
+
+    copilot.CopilotProvider().delete(_mk("copilot", session_dir=str(outside)))
+
+    assert outside.exists()
 
 
 def test_claude_delete_unlinks_file_and_filters_history(tmp_path, monkeypatch):

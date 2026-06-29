@@ -15,6 +15,7 @@ def _session(source_file=None, session_dir=None, provider="claude"):
 def test_trash_then_restore_returns_file_to_original_path(tmp_path, monkeypatch):
     monkeypatch.setattr(trash, "TRASH_DIR", tmp_path / "trash")
     monkeypatch.setattr(trash, "MANIFEST_FILE", tmp_path / "trash" / "manifest.json")
+    monkeypatch.setattr(trash, "ALLOWED_RESTORE_ROOTS", {"claude": [tmp_path / "sessions"]})
     original = tmp_path / "sessions" / f"{SID}.jsonl"
     original.parent.mkdir()
     original.write_text('{"type":"user"}\n', encoding="utf-8")
@@ -33,6 +34,7 @@ def test_trash_then_restore_returns_file_to_original_path(tmp_path, monkeypatch)
 def test_trash_dir_session_and_purge(tmp_path, monkeypatch):
     monkeypatch.setattr(trash, "TRASH_DIR", tmp_path / "trash")
     monkeypatch.setattr(trash, "MANIFEST_FILE", tmp_path / "trash" / "manifest.json")
+    monkeypatch.setattr(trash, "ALLOWED_RESTORE_ROOTS", {"grok": [tmp_path / "grok-sessions"]})
     sdir = tmp_path / "grok-sessions" / SID
     sdir.mkdir(parents=True)
     (sdir / "summary.json").write_text("{}", encoding="utf-8")
@@ -63,3 +65,45 @@ def test_empty_trash_clears_all(tmp_path, monkeypatch):
     n = trash.empty_trash()
     assert n == 2
     assert trash.list_trashed() == []
+
+
+def test_restore_rejects_manifest_path_outside_provider_root(tmp_path, monkeypatch):
+    monkeypatch.setattr(trash, "TRASH_DIR", tmp_path / "trash")
+    monkeypatch.setattr(trash, "MANIFEST_FILE", tmp_path / "trash" / "manifest.json")
+    monkeypatch.setattr(trash, "ALLOWED_RESTORE_ROOTS", {"claude": [tmp_path / "allowed"]})
+
+    trashed = tmp_path / "trash" / "claude" / SID / f"{SID}.jsonl"
+    trashed.parent.mkdir(parents=True)
+    trashed.write_text("{}", encoding="utf-8")
+    outside = tmp_path / "outside" / f"{SID}.jsonl"
+    trash.MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
+    trash.MANIFEST_FILE.write_text(json.dumps([{
+        "id": SID,
+        "provider": "claude",
+        "kind": "file",
+        "original_path": str(outside),
+        "trashed_path": str(trashed),
+    }]), encoding="utf-8")
+
+    assert trash.restore_session(SID) is False
+    assert trashed.exists()
+    assert not outside.exists()
+
+
+def test_purge_rejects_manifest_path_outside_trash_root(tmp_path, monkeypatch):
+    monkeypatch.setattr(trash, "TRASH_DIR", tmp_path / "trash")
+    monkeypatch.setattr(trash, "MANIFEST_FILE", tmp_path / "trash" / "manifest.json")
+
+    outside = tmp_path / "outside.jsonl"
+    outside.write_text("{}", encoding="utf-8")
+    trash.MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
+    trash.MANIFEST_FILE.write_text(json.dumps([{
+        "id": SID,
+        "provider": "claude",
+        "kind": "file",
+        "original_path": str(tmp_path / "allowed" / f"{SID}.jsonl"),
+        "trashed_path": str(outside),
+    }]), encoding="utf-8")
+
+    assert trash.purge_session(SID) is False
+    assert outside.exists()
