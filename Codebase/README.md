@@ -1,4 +1,4 @@
-﻿---
+---
 id: codebase-session-portal
 title: session-portal Codebase
 type: codebase
@@ -7,6 +7,24 @@ updated: 2026-06-26
 tags:
   - codebase
   - backup
+project: Codebase
+repository: Not applicable
+technology:
+  - Markdown
+dependencies:
+  - Not applicable
+skills:
+  - Knowledge Management
+services:
+  - Obsidian
+related_notes:
+  - Index.md
+repository_path: Not applicable
+business_area: portfolio
+lifecycle: active
+owner: Operynth
+related:
+  - Index.md
 ---
 
 # session-portal Codebase

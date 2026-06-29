@@ -9,11 +9,29 @@ tags:
   - sessions
   - claude
   - codex
+project: App
+repository: Not applicable
+technology:
+  - Markdown
+dependencies:
+  - Not applicable
+skills:
+  - Knowledge Management
+services:
+  - Obsidian
+related_notes:
+  - Index.md
+repository_path: Not applicable
+business_area: portfolio
+lifecycle: active
+owner: Operynth
+related:
+  - Index.md
 ---
 
 # Session Portal App
 
-Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude, Codex, and Grok sessions on this machine. It also indexes local memory notes and local LLM inventories for quick lookup.
+Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude, Codex, and Grok sessions on this machine. It also indexes supported local prompt-history files for quick lookup.
 
 ## Launch
 
@@ -30,27 +48,26 @@ Double-clicking `session_portal.pyw` opens the Tkinter app directly without firs
 - Claude sessions from `%USERPROFILE%\.claude`
 - Codex sessions from `%USERPROFILE%\.codex`
 - Grok sessions from `%USERPROFILE%\.grok\sessions`
-- Codex memories from `%USERPROFILE%\.codex\memories`
-- Claude memories/context from `%USERPROFILE%\.claude\CLAUDE.md`, agents, commands, and top-level skill files
 - Grok prompt history from `%USERPROFILE%\.grok\sessions`
-- Local LLM prompt history when a provider exposes a readable history file
+- Ollama prompt history when available
 - Generated titles when available
 - Project folders where sessions were originally run
+- Row numbers for quick visual reference in the current filtered/sorted list
 - First and last human prompts
 - Token counts when the session files include usage data
 
 ## Main Actions
 
-- Choose enabled LLM sources during first-run onboarding
+- Choose enabled sources during first-run onboarding
 - Search sessions by project or title
-- Filter by Claude, Codex, Grok, Memory, LLMs, or all items
+- Filter by Models, Claude, Codex, Grok, or Ollama
 - Reopen source selection later with the Sources button
 - Sort by date or project
+- Use the reorganized header/status bar, controls row, numbered sessions list, and preview panel layout
 - Preview session metadata and prompts
 - Resume a session in its recorded working directory
 - Resume Grok sessions with `grok --resume <session-id>`
 - Open Grok prompt-history rows directly in Notepad
-- Open memory markdown files
 - Rename sessions locally
 - Delete selected sessions
 
@@ -72,11 +89,10 @@ Double-clicking `session_portal.pyw` opens the Tkinter app directly without firs
 - Vault notes must stay current when the app changes. Update this README and the project overview with any meaningful behavior, launch, source-discovery, or file-layout change.
 - Use `session_portal.pyw` for normal launching.
 - The root window stays hidden during initial UI construction and session scanning, then appears once to avoid startup flicker.
+- The app launches wide by default so the `Thread / Last Prompt` column is visible without resizing.
 - Session launch helpers suppress intermediate helper-console flashes while still opening the real terminal window.
-- First launch opens source onboarding so the user can choose which local LLM tools to scan. Saved choices are reused on later launches.
-- Claude Memory is a separate source choice from Claude sessions. It indexes the global `CLAUDE.md`, `agents/*.md`, `commands/*.md`, and one top-level entry file per installed Claude skill.
+- First launch opens source onboarding so the user can choose which local tools to scan. Saved choices are reused on later launches.
 - Restart the app after code edits; the Refresh button reloads session data, not Python source code.
-- The app intentionally hides model inventory and model-group controls. It focuses on sessions, memories, and prompt history.
+- The app intentionally hides model inventory, model-group controls, and memory sections. It focuses on sessions and prompt history.
 - Grok prompt-history rows are read-only and open directly in Notepad; Grok session rows can be resumed.
-- Memory items are read-only in the app; they can be opened but not renamed or deleted from Session Portal.
 - The app does not require an API service.

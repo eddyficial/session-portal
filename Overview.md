@@ -13,16 +13,28 @@ tags:
   - codex
   - claude
   - grok
-  - llm-memory
 project: Session Portal
 repository_path: C:\Operynth\Projects\session-portal\Codebase
 business_area: platform
 lifecycle: active
+repository: Not applicable
+technology:
+  - Markdown
+dependencies:
+  - Not applicable
+skills:
+  - Knowledge Management
+services:
+  - Obsidian
+related_notes:
+  - Index.md
+related:
+  - Index.md
 ---
 
 # Session Portal
 
-Session Portal is a local Tkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude, Codex, Grok, Claude memory/context files, Codex memories, and supported local prompt-history files discovered during source onboarding.
+Session Portal is a local Tkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude, Codex, Grok, and supported local prompt-history files discovered during source onboarding.
 
 ## App
 
@@ -43,8 +55,6 @@ pyw .\session_portal.pyw
 - Claude sessions: `%USERPROFILE%\.claude`
 - Codex sessions: `%USERPROFILE%\.codex`
 - Grok sessions and prompt history: `%USERPROFILE%\.grok`
-- Claude memories/context: `%USERPROFILE%\.claude\CLAUDE.md`, `%USERPROFILE%\.claude\agents`, `%USERPROFILE%\.claude\commands`, and top-level `%USERPROFILE%\.claude\skills` entries
-- Codex memories: `%USERPROFILE%\.codex\memories`
 - Source choices: `C:\Operynth\Projects\session-portal\Codebase\settings.json`
 - Custom display names: `C:\Operynth\Projects\session-portal\Codebase\renames.json`
 
@@ -52,7 +62,12 @@ pyw .\session_portal.pyw
 
 - Resumable Grok session rows launch Grok with `grok --resume`.
 - Grok prompt-history rows are read-only file entries and open directly in Notepad.
-- Model inventory and model-group controls are intentionally hidden; the app focuses on sessions, memories, and prompt history.
+- Session rows are numbered in the current filtered and sorted order for quick reference.
+- The source filter uses `Models` as the combined/default view label.
+- Ollama prompt-history rows are labeled as `Ollama`.
+- The UI is organized into a header/status bar, controls row, sessions list, preview panel, and quiet footer.
+- The app launches wide enough for the `Thread / Last Prompt` column to be visible by default.
+- Model inventory, model-group controls, and memory sections are intentionally hidden; the app focuses on sessions and prompt history.
 - Startup keeps the root window hidden until the UI is built and the first scan is complete, avoiding the half-drawn double blink.
 - Terminal launch helpers suppress intermediate helper-console flashes while still opening the actual terminal session.
 
