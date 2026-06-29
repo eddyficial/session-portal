@@ -1,15 +1,23 @@
 # Session Portal
 
-Session Portal is a local CustomTkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions from this machine. It currently scans Claude Code, Codex, Grok, and GitHub Copilot CLI sessions discovered during provider onboarding and only shows rows that can be resumed.
+Session Portal is a local CustomTkinter desktop app for browsing, previewing, renaming, deleting, and resuming local AI sessions. It currently scans Claude Code, Codex, Grok, GitHub Copilot CLI, and AMP sessions discovered during provider onboarding and only shows rows that can be resumed.
 
-## Terminology
+### Terminology
 
-- **Session**: a resumable local conversation or work state. Each row in the app is a session.
-- **Thread**: the conversation title or prompt shown for a session.
-- **LLM**: the local harness plus the specific language model recorded in the session file, such as `Claude Code / glm-5.2`, `Codex / gpt-5.5`, or `Grok / grok-composer-2.5-fast`. If the session did not record one, Session Portal shows the harness with `Unknown`.
-- **Provider**: the local tool or harness that created the session, such as Claude Code, Codex, Grok, or GitHub Copilot CLI.
+| Term | Meaning |
+| --- | --- |
+| Session | A resumable local conversation or work state. Each row in the app is a session. |
+| Thread | The conversation title or prompt shown for a session. |
+| LLM | The tool plus the language model recorded in the session file. If no model is recorded, Session Portal shows `Unknown`. |
+| Provider | The local tool or harness that created the session, such as Claude Code, Codex, Grok, Copilot, or AMP. |
 
-## App
+Example LLM labels:
+
+- `Claude Code / glm-5.2`
+- `Codex / gpt-5.5`
+- `Grok / grok-composer`
+
+### App
 
 - Code: `Codebase/v2`
 - README: `App/README.md`
@@ -20,7 +28,7 @@ Session Portal is a local CustomTkinter desktop app for browsing, previewing, re
 - One-step installer: `install.ps1`
 - Repo-folder launcher: `launch_session_portal.bat`
 
-## Run
+### Run
 
 Clone the repo and run commands from the repo root:
 
@@ -59,22 +67,26 @@ git pull
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 ```
 
-## Local Data
+### Local Data
 
-- Claude Code sessions: `%USERPROFILE%\.claude`
-- Codex sessions: `%USERPROFILE%\.codex`
-- Grok sessions: `%USERPROFILE%\.grok`
-- GitHub Copilot CLI sessions: `%USERPROFILE%\.copilot\session-state`
-- AMP CLI threads: detected from `%USERPROFILE%\.amp`, `%USERPROFILE%\.config\amp`, `%USERPROFILE%\.local\share\amp`, `%LOCALAPPDATA%\amp`, and loaded through `amp threads list --json`
-- Provider choices: `Codebase/v2/settings.json`
-- Custom display names: `Codebase/v2/renames.json`
-- Error log: `Codebase/v2/session_portal.log`
+| Data | Location or source |
+| --- | --- |
+| Claude Code sessions | `%USERPROFILE%\.claude` |
+| Codex sessions | `%USERPROFILE%\.codex` |
+| Grok sessions | `%USERPROFILE%\.grok` |
+| GitHub Copilot CLI sessions | `%USERPROFILE%\.copilot\session-state` |
+| AMP CLI threads | AMP metadata from the local AMP CLI |
+| Provider choices | `Codebase/v2/settings.json` |
+| Custom display names | `Codebase/v2/renames.json` |
+| Error log | `Codebase/v2/session_portal.log` |
 
-## Behavior Notes
+### Behavior Notes
 
 - Resumable Grok session rows launch Grok with `grok --resume`.
-- Resumable Copilot session rows launch GitHub Copilot CLI with `gh copilot -- --resume=<session-id>`.
-- Resumable AMP thread rows launch AMP CLI with `amp threads continue <thread-id>`. AMP thread listing uses `amp threads list --json`; full Markdown is fetched only for selected-thread viewing/export because complete AMP thread data is server-backed, not fully stored as local JSONL. Session Portal hides deleted AMP rows locally instead of calling `amp threads delete` because AMP delete is permanent server-side.
+- Resumable Copilot session rows launch GitHub Copilot CLI with its resume command.
+- Resumable AMP thread rows launch AMP CLI with its thread-continue command.
+- AMP listing uses fast metadata. Full Markdown is fetched only for selected-thread viewing or export.
+- Session Portal hides deleted AMP rows locally instead of calling AMP's permanent server-side delete.
 - Basic use flow is documented in the public README: launch, choose providers, search/filter/sort, inspect, resume, rename, delete, refresh, and toggle Auto Scan.
 - Public README now explains rename and resume step by step: select a row, confirm inspector metadata, use **Rename** for local display names, or use the green provider-specific resume button/double-click/Enter to reopen the terminal chat session.
 - Delete mode requires explicit row selection plus a confirmation dialog; Esc or Cancel exits without deleting.
@@ -118,7 +130,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Terminal launch helpers request maximized terminal windows for resumed sessions.
 - Reviewer and QA passed whole-app validation on 2026-06-28. The app compiles, launches visibly, loads only resumable sessions, filters/searches/sorts correctly, previews Claude Code/Codex/Grok metadata, renames safely, handles delete-mode cancellation, and builds correct resume commands.
 
-## V2 Promotion Track
+### V2 Promotion Track
 
 - On 2026-06-29, the `features` Git branch was created and pushed for V2 feature work.
 - V2 is now the default app on the promotion branch.
@@ -136,11 +148,13 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - Security check on 2026-06-29 found no embedded API keys or secrets in the repo scan. The main hardening change added path-boundary checks around trash restore, purge, empty-trash, and direct Grok/Copilot provider deletes so edited local state cannot move or delete files outside the app trash or expected provider session folders. Static scanner warnings remain only for intentional `Popen` terminal launches that must stay open for resumed chats.
 - Branding update on 2026-06-29 replaced the old small mark with a compact glowing portal-door icon inspired by the provided Session Portal wordmark. The app keeps its high-contrast dark utility UI and borrows only the electric blue/violet accent for the icon, avoiding a full chrome/neon UI theme shift. The mark now appears visibly in the sidebar, loads through both Tk `iconbitmap` and `iconphoto`, and the Desktop shortcut points at `session_portal.ico` to avoid stale Windows icon-cache behavior.
 - Taskbar identity update on 2026-06-29 added a Windows AppUserModelID in the Python-hosted app and stamps the same identity onto the Desktop shortcut, so fresh shortcut launches appear as **Session Portal** in the Windows taskbar instead of generic Python.
-- AMP performance/deletion update on 2026-06-29 keeps AMP refresh, preview, and search on fast `amp threads list --json` metadata. Full Markdown is fetched only for **View Thread** or **Export Thread** on one selected AMP thread. AMP Delete now appears as **Hide AMP Row** for selected AMP threads, shows an inspector warning, and hides rows locally through `Codebase/v2/hidden_sessions.json` instead of calling AMP's permanent server-side delete.
+- AMP performance/deletion update on 2026-06-29 keeps AMP refresh, preview, and search on fast metadata. Full Markdown is fetched only for **View Thread** or **Export Thread** on one selected AMP thread. AMP Delete now appears as **Hide AMP Row**, shows an inspector warning, and hides rows locally instead of calling AMP's permanent server-side delete.
 - Usability update on 2026-06-29 added hover tooltips for the brand area, provider filters, source scanning, refresh, clean-empty, auto-scan, trash, cost estimate, search, date range, sort menu, session table, inspector preview, and inspector actions. The public README now documents those tooltips plus the **Export Thread** flow for saving review/audit Markdown files.
 - Public README cleanup on 2026-06-29 rewrote the root README as a clean open-source landing page with accurate install, update, uninstall, launch, provider, privacy, usage, export, trash, logging, and development sections. `App/README.md` now acts as a shorter app-focused companion note.
 - GitHub automation guardrails were added on 2026-06-29. The repo now has bug/feature issue templates, a label manifest including `auto-fix`, and a guarded auto-fix workflow that only runs on explicitly labeled issues or manual dispatch. The workflow creates `auto/issue-<number>`, writes a sanitized handoff under `.github/auto-fix/`, runs tests, and opens a draft PR for human review instead of pushing directly to `main`.
+- Public screenshot guidance was added on 2026-06-29. Shared screenshots should use generic sample projects, prompts, paths, and session IDs while explaining the app states: all-models view, provider filters, search/date controls, session table, inspector, tooltips, thread viewer, export, and resume.
+- Sanitized public screenshots now live under `App/assets/` and use synthetic demo data only.
 
-## Operating Rule
+### Operating Rule
 
 - Always update this vault when the app changes. Code edits should be reflected in the project overview and app README so the vault remains the source of truth for what exists, how it runs, and what changed.

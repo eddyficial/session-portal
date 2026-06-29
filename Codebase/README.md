@@ -3,7 +3,7 @@
 - Source: `Codebase`
 - Files: app files, dependency manifest, and this README
 
-## App Files
+### App Files
 
 - `session_portal.py` - console launcher for the modular V2 app
 - `session_portal.pyw` - no-console launcher for the modular V2 app
@@ -11,7 +11,7 @@
 - `legacy/session_portal_v1.py` - temporary V1 rollback reference
 - `requirements.txt`
 
-## File Tree
+### File Tree
 
 ````text
 README.md

@@ -2,9 +2,9 @@
 
 Session Portal is a local Windows desktop app for finding, previewing, exporting, cleaning, and resuming AI CLI sessions from one place.
 
-It scans the current user's machine for supported AI coding tools, shows only resumable sessions, and opens selected sessions back in their recorded working folder.
+It scans the current user's local workspace for supported AI coding tools, shows only resumable sessions, and opens selected sessions back in their recorded working folder.
 
-## Supported Providers
+### Supported Providers
 
 - Claude Code
 - Codex
@@ -14,7 +14,7 @@ It scans the current user's machine for supported AI coding tools, shows only re
 
 Other local AI tools may be detected during onboarding, but only tools with implemented session loaders appear in the main session list.
 
-## Core Actions
+### Core Actions
 
 - Search sessions by project, title, date, provider, or prompt text
 - Preview metadata, first prompt, last prompt, token counts, and message counts
@@ -26,7 +26,7 @@ Other local AI tools may be detected during onboarding, but only tools with impl
 - Hide AMP threads locally without calling AMP's permanent server delete
 - Clean currently shown empty sessions
 
-## Install
+### Install
 
 ```powershell
 git clone https://github.com/eddyficial/session-portal.git
@@ -36,7 +36,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 After installation, launch **Session Portal** from the Desktop shortcut.
 
-## Launch
+### Launch
 
 ```powershell
 pyw .\Codebase\session_portal.pyw
@@ -46,7 +46,7 @@ The `.pyw` launcher starts the app without opening an extra console window.
 
 The Desktop shortcut uses the bundled Session Portal icon and app identity so Windows shows Session Portal in the taskbar instead of generic Python.
 
-## Update
+### Update
 
 ```powershell
 git pull
@@ -59,7 +59,7 @@ Run the full installer again if dependencies changed:
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-## Uninstall
+### Uninstall
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
@@ -71,7 +71,7 @@ To also remove Session Portal local data inside the cloned repo:
 powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -RemoveLocalData
 ```
 
-## How To Use
+### How To Use
 
 1. Launch Session Portal.
 2. Choose providers on first launch and click **Save**.
@@ -86,7 +86,35 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -Remov
 11. Use **Clean Empty** to move currently shown `0` message sessions to Trash.
 12. Use **Trash** to restore or permanently purge deleted sessions.
 
-## Table Columns
+### What The Screens Show
+
+These screenshots use synthetic demo data. They do not show real user paths, project names, prompts, or session IDs.
+
+#### All Models
+
+![Session Portal all models view](assets/session-portal-all-models.png)
+
+#### Provider Filter
+
+![Session Portal provider filter view](assets/session-portal-provider-filter.png)
+
+#### View Thread
+
+![Session Portal thread viewer](assets/session-portal-thread-view.png)
+
+#### Resume Terminal
+
+![Session Portal resumed terminal](assets/session-portal-resume-terminal.png)
+
+| Screen area | Purpose |
+| --- | --- |
+| Sidebar | Filter sessions by provider and run actions like Refresh, Clean Empty, Trash, and Compute Costs. |
+| Table | Review resumable sessions with LLM, project, date, message count, and prompt/title. |
+| Inspector | Preview metadata plus first and last messages for the selected session. |
+| View Thread | Open a longer read-only transcript before resuming. |
+| Resume | Reopen the selected provider CLI in the recorded working folder. |
+
+### Table Columns
 
 - `#`: row number in the current filtered and sorted list
 - `LLM`: provider plus recorded model
@@ -95,7 +123,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -Remov
 - `Msgs`: useful human message count
 - `Thread / Last Prompt`: title, thread name, or useful prompt text
 
-## Local Files
+### Local Files
 
 ```text
 Codebase/v2/settings.json
@@ -108,7 +136,7 @@ Codebase/v2/session_portal.log
 
 These files are user-specific and ignored by git.
 
-## Notes
+### Notes
 
 - Session Portal is local-first and does not require an API service.
 - AMP delete hides rows locally because AMP threads are server-backed and provider deletion is permanent.

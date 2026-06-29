@@ -2,11 +2,11 @@
 
 Session Portal is a local Windows desktop app for finding, previewing, exporting, cleaning, and resuming AI CLI sessions from one place.
 
-It scans the current user's machine for supported AI coding tools, shows only resumable sessions, and opens selected sessions back in their recorded working folder.
+It scans the current user's local workspace for supported AI coding tools, shows only resumable sessions, and opens selected sessions back in their recorded working folder.
 
-![Session Portal logo](Codebase/v2/assets/logo_256.png)
+<img src="Codebase/v2/assets/logo_256.png" alt="Session Portal logo" width="96">
 
-## Supported Providers
+### Supported Providers
 
 Session Portal currently supports resumable sessions from:
 
@@ -18,7 +18,7 @@ Session Portal currently supports resumable sessions from:
 
 It also detects other local AI tools during onboarding, but only tools with implemented session loaders appear in the main session list.
 
-## Why Use It
+### Why Use It
 
 AI coding sessions often end up scattered across local JSONL files, CLI state folders, and provider-specific history stores. Session Portal gives you one local dashboard to:
 
@@ -32,19 +32,19 @@ AI coding sessions often end up scattered across local JSONL files, CLI state fo
 - Hide AMP threads locally without calling AMP's permanent server delete
 - Clean currently shown empty sessions
 
-## Privacy Model
+### Privacy Model
 
 Session Portal is local-first.
 
 - No API service is required.
 - No background server is started.
-- Session data is read from the current user's local machine.
+- Session data is read from the current user's local workspace.
 - Exported threads, local settings, rename files, logs, and trash data are ignored by git.
 - Resume actions open local terminal commands for the selected provider.
 
 Review the code before running it, especially because the app can resume and delete local session files.
 
-## Requirements
+### Requirements
 
 - Windows
 - Python 3
@@ -63,7 +63,7 @@ At the moment the app depends on:
 customtkinter>=6.0.0
 ```
 
-## Install
+### Install
 
 Clone the repo:
 
@@ -88,7 +88,7 @@ C:\Users\<your-username>\session-portal
 
 Replace `<your-username>` with your Windows username if you prefer absolute paths.
 
-## Launch
+### Launch
 
 Use the Desktop shortcut, or run:
 
@@ -106,7 +106,7 @@ The `.pyw` launcher is preferred for normal use because it starts the app withou
 
 The Desktop shortcut uses the bundled Session Portal icon and app identity so Windows shows Session Portal in the taskbar instead of generic Python.
 
-## Update
+### Update
 
 From the cloned repo folder:
 
@@ -121,7 +121,7 @@ If dependencies changed, run the full installer again:
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-## Uninstall
+### Uninstall
 
 Remove the Desktop shortcut:
 
@@ -139,7 +139,7 @@ Then delete the cloned `session-portal` folder if you no longer want the app.
 
 This does not delete your Claude Code, Codex, Grok, Copilot, or AMP installation folders.
 
-## First Launch
+### First Launch
 
 1. Launch Session Portal.
 2. Choose the providers you want the app to scan.
@@ -148,14 +148,14 @@ This does not delete your Claude Code, Codex, Grok, Copilot, or AMP installation
 
 You can reopen provider selection later with **Scan Sources**.
 
-## Main Screen
+### Main Screen
 
 The table shows one resumable session per row.
 
 Columns:
 
 - `#`: row number in the current filtered and sorted list
-- `LLM`: provider plus recorded model, such as `Claude Code / glm-5.2`
+- `LLM`: provider plus recorded model
 - `Project`: folder name where the session ran
 - `Date`: last known session activity
 - `Msgs`: useful human message count
@@ -163,7 +163,49 @@ Columns:
 
 Click a row to inspect it. Double-click a row or press `Enter` to resume it.
 
-## Search, Filter, And Sort
+### Screen Walkthrough
+
+These screenshots use synthetic demo data. They do not show real user paths, project names, prompts, or session IDs.
+
+#### All Models
+
+![Session Portal all models view](App/assets/session-portal-all-models.png)
+
+Shows the combined resumable session list across enabled providers. The sidebar filters by provider, the table shows session metadata, and the inspector previews the selected row.
+
+#### Provider Filter
+
+![Session Portal provider filter view](App/assets/session-portal-provider-filter.png)
+
+Shows the same table narrowed to one provider. Provider filters make it easier to review only AMP, Claude Code, Codex, Copilot, Grok, or all models.
+
+#### View Thread
+
+![Session Portal thread viewer](App/assets/session-portal-thread-view.png)
+
+Opens a read-only transcript window so users can inspect a longer conversation before resuming or exporting it.
+
+#### Resume Terminal
+
+![Session Portal resumed terminal](App/assets/session-portal-resume-terminal.png)
+
+Shows the expected resume behavior: Session Portal opens the matching CLI in the recorded working folder.
+
+These are the main UI states shown in the app screenshots:
+
+| View | What it shows |
+| --- | --- |
+| All Models | A combined list of resumable sessions from every enabled provider. |
+| Provider filters | Narrow the table to one tool, such as AMP, Claude Code, Codex, Copilot, or Grok. |
+| Search and dates | Prefilter sessions by project, title, prompt text, or activity date. |
+| Session table | Shows the LLM, project, date, message count, and thread or last prompt. |
+| Inspector | Shows metadata plus the first and last message for the selected session. |
+| Tooltips | Explain controls when users hover over buttons, table areas, or inspector actions. |
+| View Thread | Opens a read-only transcript window for deeper context before resuming. |
+| Export Thread | Saves the selected transcript as a local Markdown file. |
+| Resume button | Reopens the right CLI in the session's recorded working folder. |
+
+### Search, Filter, And Sort
 
 Use the search box to filter by project, title, or prompt text.
 
@@ -187,7 +229,7 @@ Use the sort menu or click table headers to sort by:
 - Msgs Low-High / High-Low
 - Prompt A-Z / Z-A
 
-## Resume A Session
+### Resume A Session
 
 1. Select a row.
 2. Check the right inspector to confirm the session.
@@ -197,7 +239,7 @@ Session Portal opens a maximized terminal in the recorded working directory and 
 
 If the recorded folder is missing, the app falls back to the current user's home folder when possible.
 
-## View A Thread
+### View A Thread
 
 1. Select a row.
 2. Click **View Thread**.
@@ -206,7 +248,7 @@ If the recorded folder is missing, the app falls back to the current user's home
 
 The thread viewer is read-only and keeps large session rendering bounded so the app stays responsive.
 
-## Export A Thread
+### Export A Thread
 
 Use **Export Thread** when you want a Markdown copy of a session for review, handoff, or audit records.
 
@@ -217,7 +259,7 @@ Use **Export Thread** when you want a Markdown copy of a session for review, han
 
 The export includes metadata and a readable transcript. It does not modify provider session files.
 
-## Rename A Session
+### Rename A Session
 
 1. Select a row.
 2. Click **Rename**.
@@ -232,7 +274,7 @@ Codebase/v2/renames.json
 
 They do not modify provider session files. To clear a rename, open **Rename**, empty the field, and click **OK**.
 
-## Delete, Trash, And Clean Empty
+### Delete, Trash, And Clean Empty
 
 Session Portal uses a recoverable Trash for supported local provider files.
 
@@ -247,9 +289,13 @@ Open **Trash** to restore deleted local sessions, delete selected trashed sessio
 
 Use **Clean Empty** to move currently shown sessions with `0` useful messages to Trash. This respects the current provider, search, and date filters.
 
-AMP rows are different. When an AMP row is selected, the app labels the action as **Hide AMP Row**. That hides the row only inside Session Portal by saving the thread ID in `Codebase/v2/hidden_sessions.json`. It does not call `amp threads delete`, because AMP threads are server-backed and provider deletion is permanent.
+AMP rows are different.
 
-## Refresh And Auto Scan
+When an AMP row is selected, the app labels the action as **Hide AMP Row**.
+That hides the row only inside Session Portal by saving the thread ID locally.
+It does not call AMP's permanent server-side delete command.
+
+### Refresh And Auto Scan
 
 - **Refresh** reloads session data immediately.
 - **Auto Scan** checks for new supported sessions every 60 seconds while the app is open.
@@ -257,13 +303,13 @@ AMP rows are different. When an AMP row is selected, the app labels the action a
 
 Use Refresh when you just created, renamed, deleted, or resumed a session and want the list updated now.
 
-## Compute Costs
+### Compute Costs
 
 **Compute Costs** estimates cost only when token usage is available in session files. It runs on demand so normal browsing stays fast.
 
 Cost estimates are approximate and provider/model pricing can change.
 
-## Keyboard Shortcuts
+### Keyboard Shortcuts
 
 - `Enter`: resume selected session
 - Double-click: resume selected session
@@ -271,7 +317,7 @@ Cost estimates are approximate and provider/model pricing can change.
 - `Q`: quit
 - `Esc`: leave delete mode
 
-## Local Files
+### Local Files
 
 Session Portal stores local app data under the cloned repo:
 
@@ -288,7 +334,7 @@ These files are user-specific and ignored by git.
 
 The rotating error log records startup crashes, provider scan failures, failed CLI calls, resume failures, export failures, rename-save failures, and trash/restore problems.
 
-## Project Layout
+### Project Layout
 
 ```text
 App/                         Public app README and project notes
@@ -305,7 +351,7 @@ launch_session_portal.bat    Repo-folder launcher
 SECURITY.md                  Security policy
 ```
 
-## Development
+### Development
 
 Run tests from the repo root:
 
@@ -325,9 +371,13 @@ The V2 app is organized into focused modules:
 
 Provider failures are isolated and logged so one broken provider or corrupt session file does not prevent the rest of the app from loading.
 
-AMP is intentionally optimized for normal browsing: refresh, preview, and search use `amp threads list --json` metadata. Session Portal only calls `amp threads markdown <id>` when the user opens **View Thread** or **Export Thread** for one selected AMP thread.
+AMP is optimized for normal browsing.
 
-## Guarded Auto-Fix Workflow
+- Refresh, preview, and search use fast AMP list metadata.
+- Full AMP Markdown is fetched only for **View Thread** or **Export Thread**.
+- Only the selected AMP thread is expanded.
+
+### Guarded Auto-Fix Workflow
 
 Session Portal includes a conservative GitHub issue automation path.
 
@@ -352,7 +402,7 @@ Guardrails:
 - Tests must pass before the generated PR is ready for review.
 - Any future AI/API token must live in GitHub Secrets, never in the repo.
 
-## Security
+### Security
 
 See [SECURITY.md](SECURITY.md).
 
