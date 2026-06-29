@@ -1,6 +1,6 @@
 # Session Portal App
 
-Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude Code, Codex, Grok, and GitHub Copilot CLI sessions on this machine. It uses a CustomTkinter shell and only shows sessions that can be resumed.
+Session Portal is a local Windows desktop app for finding, previewing, renaming, deleting, and resuming Claude Code, Codex, Grok, and GitHub Copilot CLI sessions on this machine. It uses the modular V2 CustomTkinter shell and only shows sessions that can be resumed.
 
 ## Terminology
 
@@ -54,6 +54,14 @@ Uninstall shortcut:
 powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 ```
 
+Update from a cloned install:
+
+```powershell
+cd %USERPROFILE%\session-portal
+git pull
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
+```
+
 ## What It Shows
 
 - Claude Code sessions from `%USERPROFILE%\.claude`
@@ -82,6 +90,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Use the left provider sidebar, table-aligned search rail, wide numbered sessions table, and compact right inspector layout
 - The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Local AI Workspace` labels the sidebar subtitle.
 - Preview session metadata and prompts
+- Open the read-only thread viewer for a selected session
 - Scroll long inspector previews independently in the right panel
 - Resume a session in its recorded working directory with the terminal opened maximized
 - Resume Grok sessions with `grok --resume <session-id>`
@@ -89,6 +98,8 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Rename sessions locally
 - Delete selected sessions
 - Clean currently shown empty sessions with **Clean Empty Msgs** after confirmation
+- Move deleted sessions into a recoverable Trash before permanent purge
+- Compute approximate local cost estimates only when requested with **Compute Costs**
 
 ## Use Flow
 
@@ -100,7 +111,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 6. Click table headers or the sort menu to change ordering.
 7. Select a row to inspect metadata and first/last prompt.
 8. Double-click, press Enter, or click the resume button to reopen the session in a maximized terminal.
-9. Use Rename to store a local display name in `Codebase/renames.json`.
+9. Use Rename to store a local display name in `Codebase/v2/renames.json`.
 10. Use Delete to enter delete mode, select one or more rows, click Delete Selected, and confirm the warning dialog.
 11. Use Esc or Cancel to leave delete mode without deleting.
 12. Use **Clean Empty Msgs** to remove currently shown sessions with no useful human messages after confirmation.
@@ -114,7 +125,7 @@ To rename a session:
 3. Type the display name you want.
 4. Click **OK**.
 
-The rename is local to Session Portal and is saved in `Codebase/renames.json`. It does not edit the provider's original session file. To remove a custom rename, open **Rename**, clear the text box, and click **OK**.
+The rename is local to Session Portal and is saved in `Codebase/v2/renames.json`. It does not edit the provider's original session file. To remove a custom rename, open **Rename**, clear the text box, and click **OK**.
 
 To resume a session:
 
@@ -130,6 +141,8 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 
 - Main app: `Codebase/session_portal.py`
 - No-console launcher: `Codebase/session_portal.pyw`
+- Modular app package: `Codebase/v2`
+- Legacy V1 rollback file: `Codebase/legacy/session_portal_v1.py`
 - Dependency file: `Codebase/requirements.txt`
 - One-step installer: `install.ps1`
 - Repo-folder launcher: `launch_session_portal.bat`
@@ -139,13 +152,13 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 
 - App folder: `App`
 - Codebase folder: `Codebase`
-- Saved provider choices: `Codebase/settings.json`
-- Custom names file: `Codebase/renames.json`
+- Saved provider choices: `Codebase/v2/settings.json`
+- Custom names file: `Codebase/v2/renames.json`
 
 ## Current Notes
 
 - Vault notes must stay current when the app changes. Update this README and the project overview with any meaningful behavior, launch, provider discovery, or file-layout change.
-- Use `session_portal.pyw` for normal launching.
+- Use `session_portal.pyw` for normal launching. It starts the modular V2 app.
 - The root window stays hidden during initial UI construction and session scanning, then appears once to avoid startup flicker.
 - The app sets its default window to the current screen size and launches maximized so the `Thread / Last Prompt` column is visible without resizing.
 - The current UI uses CustomTkinter for the app frame, sidebar, search, filters, and sort controls while retaining the stable Tk table and preview internals.

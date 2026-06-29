@@ -14,6 +14,13 @@ If a session does not have a valid recorded working directory, Session Portal fa
 
 Onboarding also checks for other common local AI tools, such as Cursor, Windsurf, Gemini CLI, Continue, Aider, Ollama, and LM Studio. Those tools are listed when found, but Session Portal only shows resumable session rows for providers with implemented session loaders.
 
+## Development Tracks
+
+- The default Session Portal launcher now uses the modular V2 app.
+- `features` is the active promotion branch for the V2 app before it is merged back to `main`.
+- V2 separates providers, sessions, storage, resume logic, trash/recovery, cost estimates, thread viewing, and UI modules.
+- The old V1 implementation is kept temporarily at `Codebase\legacy\session_portal_v1.py` as a rollback reference.
+
 ## Terminology
 
 - **Session**: a resumable local conversation or work state. Each row in the app is a session.
@@ -74,6 +81,32 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -Remov
 
 This does not delete Claude Code, Codex, Grok, Copilot, or any AI session folders under `%USERPROFILE%`.
 
+## Update
+
+If you installed Session Portal with `git clone`, update it from the cloned repo folder:
+
+```powershell
+cd %USERPROFILE%\session-portal
+git pull
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
+```
+
+In PowerShell, this path form also works:
+
+```powershell
+cd $env:USERPROFILE\session-portal
+git pull
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
+```
+
+`git pull` downloads the latest app changes. Running `install.ps1 -SkipDependencies` refreshes the Desktop shortcut without reinstalling Python packages.
+
+If dependencies changed in a future release, run the full installer again:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
 ## Run
 
 Use the no-console launcher:
@@ -93,6 +126,8 @@ Or run the main script:
 ```powershell
 py -3 .\Codebase\session_portal.py
 ```
+
+Both launchers start the modular V2 app.
 
 ## First Launch
 
@@ -156,6 +191,8 @@ Available sorts:
 - LLM Z-A
 - Project A-Z
 - Project Z-A
+- Msgs Low-High
+- Msgs High-Low
 - Prompt A-Z
 - Prompt Z-A
 
@@ -174,6 +211,27 @@ Select any row. The right inspector shows:
 - First and last useful prompt
 
 Long previews have their own scrollbar.
+
+### View A Thread
+
+1. Select a session row.
+2. Click **View Thread** in the inspector actions.
+3. Read the conversation in the popup window.
+4. Use the popup scrollbar for long sessions.
+5. Click **Close** when done.
+
+For large Codex sessions, the thread viewer streams the full local session file and keeps the newest readable tail in the popup. This keeps memory use bounded while making the visible ending match the latest resumed terminal chat output.
+
+### Save An Audit Copy
+
+Use **Save Audit** when you want to preserve a readable copy of a session thread for reviewing AI actions later.
+
+1. Select a session row.
+2. Click **Save Audit**.
+3. Session Portal writes a Markdown file under `Codebase/v2/audits/`.
+4. The file includes session metadata, provider, LLM, project, session id, source file path, message count, and the readable thread transcript.
+
+Audit exports are opt-in and local. They do not modify Claude Code, Codex, Grok, or Copilot session files. The `Codebase/v2/audits/` folder is ignored by Git so private thread exports are not committed by default.
 
 ### Resume A Session
 
@@ -204,7 +262,7 @@ To remove a custom name:
 
 The original title or prompt will show again.
 
-Renames are saved locally in `Codebase/renames.json`. They do not modify the provider's original session file.
+Renames are saved locally in `Codebase/v2/renames.json`. They do not modify the provider's original session file.
 
 ### Delete Sessions
 
@@ -280,6 +338,8 @@ Use **Auto Scan** when:
 - Show message counts in the `Msgs` column and sort by message count
 - Auto Scan refreshes supported provider/session discovery while the app is open
 - Preview session metadata plus first/last prompts
+- View the readable thread transcript without launching the provider
+- Save a local Markdown audit copy of a selected thread
 - Scroll long inspector previews independently in the right panel
 - Resume sessions in their original working directory with the terminal opened maximized
 - Rename sessions locally
@@ -290,10 +350,11 @@ Use **Auto Scan** when:
 
 Session Portal stores local preferences next to the app:
 
-- `Codebase/settings.json`
-- `Codebase/renames.json`
+- `Codebase/v2/settings.json`
+- `Codebase/v2/renames.json`
+- `Codebase/v2/audits/`
 
-These files are ignored by Git because they are user-specific.
+These files and folders are ignored by Git because they are user-specific.
 
 ## Notes
 

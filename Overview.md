@@ -11,10 +11,12 @@ Session Portal is a local CustomTkinter desktop app for browsing, previewing, re
 
 ## App
 
-- Code: `Codebase/session_portal.py`
+- Code: `Codebase/v2`
 - README: `App/README.md`
 - Codebase: `Codebase/README.md`
 - Launcher: `Codebase/session_portal.pyw`
+- Console launcher: `Codebase/session_portal.py`
+- Legacy V1 rollback: `Codebase/legacy/session_portal_v1.py`
 - One-step installer: `install.ps1`
 - Repo-folder launcher: `launch_session_portal.bat`
 
@@ -49,14 +51,22 @@ Uninstall shortcut:
 powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 ```
 
+Update from a cloned install:
+
+```powershell
+cd %USERPROFILE%\session-portal
+git pull
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
+```
+
 ## Local Data
 
 - Claude Code sessions: `%USERPROFILE%\.claude`
 - Codex sessions: `%USERPROFILE%\.codex`
 - Grok sessions: `%USERPROFILE%\.grok`
 - GitHub Copilot CLI sessions: `%USERPROFILE%\.copilot\session-state`
-- Provider choices: `Codebase/settings.json`
-- Custom display names: `Codebase/renames.json`
+- Provider choices: `Codebase/v2/settings.json`
+- Custom display names: `Codebase/v2/renames.json`
 
 ## Behavior Notes
 
@@ -103,6 +113,59 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Terminal launch helpers suppress intermediate helper-console flashes while still opening the actual terminal session.
 - Terminal launch helpers request maximized terminal windows for resumed sessions.
 - Reviewer and QA passed whole-app validation on 2026-06-28. The app compiles, launches visibly, loads only resumable sessions, filters/searches/sorts correctly, previews Claude Code/Codex/Grok metadata, renames safely, handles delete-mode cancellation, and builds correct resume commands.
+
+## V2 Promotion Track
+
+- On 2026-06-29, the `features` Git branch was created and pushed for V2 feature work.
+- V2 is now the default app on the promotion branch.
+- V2 is the preferred engineering direction because it separates providers, session aggregation, storage, resume launch behavior, trash/recovery, thread viewing, cost estimates, and UI modules.
+- The V2 provider layer is the desired foundation for Claude Code, Codex, Grok, Copilot, and future local AI tools, instead of continuing to expand one large `session_portal.py` file.
+- V1 remains archived at `Codebase/legacy/session_portal_v1.py` as a temporary rollback reference.
+- Current V2 tests pass locally: provider parsing, bounded reads, delete safety, resume-command construction, search indexing, trash/recovery, thread viewing, and cost estimates.
+- V2 live smoke test on 2026-06-29 confirmed the app launches maximized, loads the session table, shows the sidebar controls, and keeps cost totals hidden until explicitly computed. A cost-rollup side effect was fixed so message-count scanning no longer caches token costs automatically.
+- `Codebase/session_portal.py` and `Codebase/session_portal.pyw` now launch V2.
+- The thread viewer now keeps the newest bounded slice of large transcripts and scrolls to the bottom on open so the visible ending matches the inspector's last message. Inspector metadata labels were tightened so the full session GUID stays on the `Session` line.
+- Inspector token and cache counts now use compact `M`/`K` formatting so token metadata stays on one line in the right panel.
+- Codex thread viewing now streams the full selected rollout file before applying the bounded render tail. This fixes large-session mismatches where the resumed CLI showed newer final messages than **View Thread**.
+- Selected threads can now be saved as local Markdown audit exports through **Save Audit**. Exports live under `Codebase/v2/audits/`, include metadata plus the readable thread transcript, and are git-ignored by default.
+
+## Future Product Direction
+
+Session Portal can grow from a local session manager into an **AI Workspace**: a local command center for searching, auditing, resuming, organizing, and transferring context across the AI tools a user already runs on their machine.
+
+The durable product thesis:
+
+- Session Portal v1/V2 manages resumable sessions.
+- The next product layer should preserve **continuity across AI tools**.
+- The unique value is not another chat surface; it is a cross-provider workspace that explains what happened, why it happened, where the work lives, and how to continue it safely.
+
+Potential future build areas:
+
+- **Universal thread index**: normalize Claude Code, Codex, Grok, Copilot, and future providers into one schema for provider, model, project, messages, tool calls, files, cost, and timestamps.
+- **Universal search**: search across every AI conversation from one place.
+- **Semantic search**: find ideas, decisions, blockers, or features even when the exact words do not match.
+- **Project view**: group all sessions by project folder and show timeline, latest activity, summaries, open tasks, and related sessions.
+- **Audit layer**: preserve selected threads, file changes, commands, tool calls, decisions, and final outcomes for reviewing AI actions.
+- **Automatic project summaries**: generate durable project state from related sessions, including what changed, what remains, and what the next agent should know.
+- **Conversation timelines**: visualize work across time, provider, model, and project.
+- **Cost analytics**: show provider/model/project costs, token totals, expensive sessions, and cost trends.
+- **Session branching**: fork a conversation into a new provider or a new task path while preserving source context.
+- **Shared project memory**: extract durable decisions and facts that Claude Code, Codex, Grok, Copilot, and future tools can reuse.
+- **One-click provider switching**: continue a session in another provider with the right context package and working directory.
+- **Knowledge graph**: link related sessions, files, decisions, bugs, tasks, and projects.
+- **Automatic tagging and organization**: tag sessions by topic, project, risk, status, cost, provider, and outcome.
+
+Suggested roadmap order:
+
+1. Universal thread index.
+2. Semantic search.
+3. Project view.
+4. Audit layer.
+5. Memory and knowledge graph.
+6. Provider switching.
+7. Cost and productivity analytics.
+
+Naming note: keep **Session Portal** for the public V1/V2 utility, but evaluate a broader product name such as **AI Workspace**, **Session OS**, **ThreadOS**, **ContextVault**, **Agent Workspace**, or **Operynth Session OS** if the product expands into cross-provider continuity.
 
 ## Operating Rule
 

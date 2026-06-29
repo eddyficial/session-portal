@@ -19,6 +19,8 @@ if (Test-Path -LiteralPath $shortcutPath) {
 
 if ($RemoveLocalData) {
     $localFiles = @(
+        (Join-Path $repoRoot "Codebase\v2\settings.json"),
+        (Join-Path $repoRoot "Codebase\v2\renames.json"),
         (Join-Path $repoRoot "Codebase\settings.json"),
         (Join-Path $repoRoot "Codebase\renames.json")
     )
@@ -29,6 +31,13 @@ if ($RemoveLocalData) {
             Write-Host "Removed local app data:"
             Write-Host $file
         }
+    }
+
+    $trashDir = Join-Path $repoRoot "Codebase\v2\.trash"
+    if (Test-Path -LiteralPath $trashDir) {
+        Remove-Item -LiteralPath $trashDir -Recurse -Force
+        Write-Host "Removed local app trash:"
+        Write-Host $trashDir
     }
 }
 

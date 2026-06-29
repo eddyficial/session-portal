@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Session Portal v2 logo — "Portal + Resume".
+     A portal doorway (arched frame) in accent blue with a green resume-play
+     triangle inside the opening. Three keystone dots in the provider accent
+     colors (purple/blue/pink) above the arch. Deep rounded-square tile matches
+     the app's dark palette. Legible down to 16px. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13131f"/>
+      <stop offset="1" stop-color="#08080f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tile -->
+  <rect x="8" y="8" width="240" height="240" rx="56" ry="56" fill="url(#tile)" stroke="#1b1b2b" stroke-width="2"/>
+
+  <!-- keystone dots (provider accents) -->
+  <circle cx="112" cy="46" r="5" fill="#d8b4ff"/>
+  <circle cx="128" cy="42" r="5" fill="#9fc5ff"/>
+  <circle cx="144" cy="46" r="5" fill="#ff7ad9"/>
+
+  <!-- portal doorway: arched frame (blue) -->
+  <path d="M 74 210
+           L 74 116
+           A 54 54 0 0 1 182 116
+           L 182 210
+           Z" fill="#9fc5ff"/>
+  <!-- opening (punch to tile color) -->
+  <path d="M 96 210
+           L 96 116
+           A 32 32 0 0 1 160 116
+           L 160 210
+           Z" fill="#0c0c14"/>
+
+  <!-- resume-play triangle (green) -->
+  <polygon points="116,104 116,156 154,130" fill="#b8f7b3"/>
+</svg>

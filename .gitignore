@@ -1,5 +1,9 @@
 Codebase/settings.json
 Codebase/renames.json
+Codebase/v2/settings.json
+Codebase/v2/renames.json
+Codebase/v2/audits/
+Codebase/v2/.trash/
 Codebase/__pycache__/
 __pycache__/
 *.py[cod]
