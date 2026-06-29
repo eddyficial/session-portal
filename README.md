@@ -38,6 +38,24 @@ Optional: create a desktop shortcut for easier future launches:
 powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
 ```
 
+## Uninstall
+
+Session Portal is portable. To uninstall it, delete the cloned `session-portal` folder.
+
+If you created the desktop shortcut, remove it with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
+```
+
+To also remove local Session Portal preferences from the cloned folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1 -RemoveLocalData
+```
+
+This does not delete Claude, Codex, Grok, or any AI session folders under `%USERPROFILE%`.
+
 ## Run
 
 Use the no-console launcher:
