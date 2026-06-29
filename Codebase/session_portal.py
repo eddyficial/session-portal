@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import tkinter as tk
+import customtkinter as ctk
 from urllib.parse import unquote
 from tkinter import ttk, messagebox, simpledialog
 from pathlib import Path
@@ -19,14 +20,12 @@ CODEX_INDEX_FILE = CODEX_DIR / "session_index.jsonl"
 CODEX_SESSIONS_DIR = CODEX_DIR / "sessions"
 CODEX_EXE_DIR = Path.home() / "AppData" / "Local" / "OpenAI" / "Codex" / "bin"
 CODEX_PROGRAMS_EXE_DIR = Path.home() / "AppData" / "Local" / "Programs" / "OpenAI" / "Codex" / "bin"
-OLLAMA_DIR = Path.home() / ".ollama"
-OLLAMA_HISTORY_FILE = OLLAMA_DIR / "history"
-LM_STUDIO_DIR = Path.home() / "AppData" / "Roaming" / "LM Studio"
-LM_STUDIO_MODELS_DIR = Path.home() / ".lmstudio" / "models"
 GROK_DIR = Path.home() / ".grok"
 GROK_SESSIONS_DIR = GROK_DIR / "sessions"
 GROK_MODELS_FILE = GROK_DIR / "models_cache.json"
 GROK_EXE = GROK_DIR / "bin" / "grok.exe"
+APPDATA_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+LOCALAPPDATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
 RENAMES_FILE = Path(__file__).parent / "renames.json"
 SETTINGS_FILE = Path(__file__).parent / "settings.json"
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -36,26 +35,60 @@ PROVIDER_OPTIONS = {
         "label": "Claude",
         "description": "Claude Code sessions and history",
         "path": str(CLAUDE_DIR),
+        "paths": [CLAUDE_DIR],
+        "commands": ["claude"],
     },
     "codex": {
         "label": "Codex",
         "description": "Codex sessions",
         "path": str(CODEX_DIR),
+        "paths": [CODEX_DIR, CODEX_EXE_DIR, CODEX_PROGRAMS_EXE_DIR],
+        "commands": ["codex"],
     },
     "grok": {
         "label": "Grok",
-        "description": "Grok CLI sessions and prompt history",
+        "description": "Grok CLI sessions",
         "path": str(GROK_DIR),
+        "paths": [GROK_DIR, GROK_EXE],
+        "commands": ["grok"],
+    },
+}
+
+OTHER_AI_TOOLS = {
+    "cursor": {
+        "label": "Cursor",
+        "paths": [APPDATA_DIR / "Cursor", LOCALAPPDATA_DIR / "Programs" / "Cursor"],
+        "commands": ["cursor"],
+    },
+    "windsurf": {
+        "label": "Windsurf",
+        "paths": [APPDATA_DIR / "Windsurf", LOCALAPPDATA_DIR / "Programs" / "Windsurf"],
+        "commands": ["windsurf"],
+    },
+    "gemini": {
+        "label": "Gemini CLI",
+        "paths": [Path.home() / ".gemini"],
+        "commands": ["gemini"],
+    },
+    "continue": {
+        "label": "Continue",
+        "paths": [Path.home() / ".continue", APPDATA_DIR / "Code" / "User" / "globalStorage" / "continue.continue"],
+        "commands": [],
+    },
+    "aider": {
+        "label": "Aider",
+        "paths": [Path.home() / ".aider.conf.yml", Path.home() / ".aider.model.settings.yml"],
+        "commands": ["aider"],
     },
     "ollama": {
         "label": "Ollama",
-        "description": "Ollama prompt history when found",
-        "path": str(OLLAMA_DIR),
+        "paths": [Path.home() / ".ollama"],
+        "commands": ["ollama"],
     },
-    "lm_studio": {
+    "lmstudio": {
         "label": "LM Studio",
-        "description": "LM Studio local data when supported",
-        "path": str(LM_STUDIO_DIR),
+        "paths": [Path.home() / ".lmstudio", APPDATA_DIR / "LM Studio"],
+        "commands": [],
     },
 }
 
@@ -63,6 +96,51 @@ DEFAULT_SETTINGS = {
     "onboarding_complete": False,
     "providers": {key: True for key in PROVIDER_OPTIONS},
 }
+
+APP_PALETTE = {
+    "bg": "#11111b",
+    "bg_deep": "#090910",
+    "surface": "#242438",
+    "surface_2": "#1b1b2b",
+    "overlay": "#4f536a",
+    "bar": "#090910",
+    "muted": "#a9b4d0",
+    "text": "#f4f7ff",
+}
+
+
+def _candidate_detected(info: dict) -> bool:
+    for path in info.get("paths", []):
+        try:
+            if Path(path).exists():
+                return True
+        except OSError:
+            continue
+    return any(shutil.which(command) for command in info.get("commands", []))
+
+
+def provider_detected(key: str) -> bool:
+    info = PROVIDER_OPTIONS.get(key)
+    return bool(info and _candidate_detected(info))
+
+
+def provider_label(key: str) -> str:
+    return PROVIDER_OPTIONS.get(key, {}).get("label", key.title())
+
+
+def provider_key_for_label(label: str) -> str:
+    for key, info in PROVIDER_OPTIONS.items():
+        if info.get("label") == label:
+            return key
+    return ""
+
+
+def discover_other_ai_tools() -> list[dict]:
+    found = []
+    for key, info in OTHER_AI_TOOLS.items():
+        if _candidate_detected(info):
+            found.append({"key": key, "label": info["label"]})
+    return found
 
 
 # ── Claude session loading ────────────────────────────────────────────────────
@@ -84,10 +162,10 @@ def _scan_claude_files() -> dict:
 
 
 def _decode_claude_project_dir(path: Path) -> str:
-    """Best-effort decode for Claude project folder names like C--Users-eddyo."""
+    """Best-effort decode for Claude project folder names like C--Users-username."""
     name = path.name
-    if name.startswith("C--"):
-        decoded = "C:\\" + name[3:].replace("-", "\\")
+    if len(name) > 3 and name[1:3] == "--" and name[0].isalpha():
+        decoded = f"{name[0].upper()}:\\" + name[3:].replace("-", "\\")
         return decoded
     return str(path)
 
@@ -163,8 +241,6 @@ def model_group_label(source: str, model: str = "") -> str:
     model = (model or "").strip()
     if model.startswith("<") and model.endswith(">"):
         model = ""
-    if source == "llm":
-        return model or "Local LLM"
     if source == "claude":
         lower = model.lower()
         if "opus" in lower:
@@ -367,10 +443,10 @@ def _start_powershell(cwd: str, command: str):
         raise FileNotFoundError(f"Session working directory does not exist: {cwd}")
     startup = f"Set-Location -LiteralPath {_ps_single_quote(cwd)}; {command}"
     if _has_windows_terminal():
-        subprocess.Popen(["wt", "-d", cwd, "powershell", "-NoExit", "-Command", startup], creationflags=CREATE_NO_WINDOW)
+        subprocess.Popen(["wt", "--maximized", "-d", cwd, "powershell", "-NoExit", "-Command", startup], creationflags=CREATE_NO_WINDOW)
     else:
         subprocess.Popen([
-            "cmd", "/c", "start", "", "powershell", "-NoExit", "-Command", startup,
+            "cmd", "/c", "start", "", "/MAX", "powershell", "-NoExit", "-Command", startup,
         ], creationflags=CREATE_NO_WINDOW)
 
 
@@ -379,10 +455,10 @@ def _start_cmd(cwd: str, command: str):
     if not Path(cwd).exists():
         raise FileNotFoundError(f"Session working directory does not exist: {cwd}")
     if _has_windows_terminal():
-        subprocess.Popen(["wt", "-d", cwd, "cmd", "/k", command], creationflags=CREATE_NO_WINDOW)
+        subprocess.Popen(["wt", "--maximized", "-d", cwd, "cmd", "/k", command], creationflags=CREATE_NO_WINDOW)
     else:
         subprocess.Popen([
-            "cmd", "/c", "start", "", "/D", cwd, "cmd", "/k", command,
+            "cmd", "/c", "start", "", "/D", cwd, "/MAX", "cmd", "/k", command,
         ], creationflags=CREATE_NO_WINDOW)
 
 
@@ -404,13 +480,38 @@ def _get_codex_first_message(fp: Path) -> str:
                             for part in payload.get("content", []):
                                 if isinstance(part, dict) and part.get("type") == "input_text":
                                     text = part.get("text", "").strip()
-                                    if text and not text.startswith("<"):
+                                    if _is_human_codex_text(text):
                                         return text
                 except json.JSONDecodeError:
                     continue
     except OSError:
         pass
     return ""
+
+
+def _is_human_codex_text(text: str) -> bool:
+    text = (text or "").strip()
+    if not text:
+        return False
+    lowered = text.lower()
+    if text.startswith("<"):
+        return False
+    if lowered.startswith("# agents.md instructions"):
+        return False
+    if "<instructions>" in lowered or "</instructions>" in lowered:
+        return False
+    if "## mcp-first rule" in lowered or "## open requests" in lowered:
+        return False
+    if "[system]" in lowered or "vault working directory:" in lowered:
+        return False
+    return True
+
+
+def _clean_display_text(text: str) -> str:
+    text = (text or "").strip()
+    if not _is_human_codex_text(text):
+        return ""
+    return " ".join(text.split())
 
 
 # ── Codex session loading ─────────────────────────────────────────────────────
@@ -496,9 +597,9 @@ def load_codex_sessions() -> list:
         cwd = _get_codex_cwd(fp) if fp else ""
         model = _get_codex_model(fp) if fp else ""
 
-        display = rec.get("thread_name", "")
+        display = _clean_display_text(rec.get("thread_name", ""))
         if not display and fp:
-            display = _get_codex_first_message(fp)
+            display = _clean_display_text(_get_codex_first_message(fp))
 
         entry = {
             "sessionId": sid,
@@ -560,7 +661,7 @@ def get_codex_preview(session: dict):
                             for part in payload.get("content", []):
                                 if isinstance(part, dict) and part.get("type") == "input_text":
                                     text = part.get("text", "").strip()
-                                    if text and not text.startswith("<"):
+                                    if _is_human_codex_text(text):
                                         user_messages.append(text)
 
                     elif rtype == "event_msg" and isinstance(payload, dict):
@@ -765,20 +866,6 @@ def load_grok_sessions() -> list:
             "_resumable": True,
         })
 
-    for history_file in GROK_SESSIONS_DIR.rglob("prompt_history.jsonl"):
-        cwd = _decode_grok_cwd(history_file.parent.name)
-        entries.append({
-            "sessionId": "grok-history:" + history_file.parent.name,
-            "project": cwd,
-            "display": "Grok prompt history",
-            "timestamp": int(history_file.stat().st_mtime * 1000),
-            "model": "Grok / History",
-            "model_group": "Grok / History",
-            "_file": str(history_file),
-            "_source": "grok",
-            "_resumable": False,
-        })
-
     return entries
 
 
@@ -786,23 +873,6 @@ def get_grok_preview(session: dict):
     fp = Path(session["_file"]) if "_file" in session else None
     if not fp or not fp.exists():
         return None, None, 0, {}
-    if fp.name == "prompt_history.jsonl":
-        prompts = []
-        try:
-            for line in fp.read_text(encoding="utf-8", errors="replace").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    prompt = rec.get("prompt", "")
-                    if prompt:
-                        prompts.append(prompt)
-                except json.JSONDecodeError:
-                    prompts.append(line)
-        except OSError:
-            prompts = []
-        return "\n".join(prompts[:80]), None, len(prompts), {}
     if fp.name == "chat_history.jsonl":
         return _get_grok_preview_from_chat(fp)
     try:
@@ -837,112 +907,23 @@ def open_grok_file(session: dict):
         subprocess.Popen(["notepad.exe", str(fp)])
 
 
-def _parse_ollama_list() -> list:
-    exe = shutil.which("ollama")
-    if not exe:
-        return []
-    try:
-        proc = subprocess.run([exe, "list"], capture_output=True, text=True, timeout=10)
-    except Exception:
-        return []
-    if proc.returncode != 0:
-        return []
+SESSION_LOADERS = {
+    "claude": load_claude_sessions,
+    "codex": load_codex_sessions,
+    "grok": load_grok_sessions,
+}
 
-    models = []
-    for line in proc.stdout.splitlines()[1:]:
-        line = line.strip()
-        if not line:
-            continue
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-        name = parts[0]
-        model_id = parts[1]
-        size = ""
-        if len(parts) >= 4:
-            size = " ".join(parts[2:4])
-        modified = " ".join(parts[4:]) if len(parts) > 4 else ""
-        models.append({
-            "name": name,
-            "id": model_id,
-            "size": size,
-            "modified": modified,
-        })
-    return models
+PREVIEW_LOADERS = {
+    "claude": get_claude_preview,
+    "codex": get_codex_preview,
+    "grok": get_grok_preview,
+}
 
-
-def _parse_ollama_running() -> set:
-    exe = shutil.which("ollama")
-    if not exe:
-        return set()
-    try:
-        proc = subprocess.run([exe, "ps"], capture_output=True, text=True, timeout=10)
-    except Exception:
-        return set()
-    if proc.returncode != 0:
-        return set()
-    running = set()
-    for line in proc.stdout.splitlines()[1:]:
-        line = line.strip()
-        if line:
-            running.add(line.split()[0])
-    return running
-
-
-def load_llm_entries(settings: dict | None = None) -> list:
-    settings = settings or load_settings()
-    providers = settings.get("providers", {})
-    entries = []
-
-    if providers.get("ollama", True):
-        if OLLAMA_HISTORY_FILE.exists():
-            entries.append({
-                "sessionId": "llm:ollama:history",
-                "project": "Ollama history",
-                "display": "Ollama prompt history",
-                "timestamp": int(OLLAMA_HISTORY_FILE.stat().st_mtime * 1000),
-                "model": "Ollama / History",
-                "model_group": "Ollama / History",
-                "_file": str(OLLAMA_HISTORY_FILE),
-                "_source": "llm",
-                "_provider": "Ollama",
-                "_status": "history",
-                "_resumable": False,
-            })
-
-    return entries
-
-
-def get_llm_preview(session: dict):
-    if session.get("_status") == "history" and session.get("_file"):
-        fp = Path(session["_file"])
-        try:
-            text = fp.read_text(encoding="utf-8", errors="replace").strip()
-        except OSError:
-            text = ""
-        return text[:4000], None, len(text.splitlines()), {}
-
-    rows = [
-        f"Provider: {session.get('_provider', '')}",
-        f"Status: {session.get('_status', '')}",
-    ]
-    if session.get("_model_id"):
-        rows.append(f"ID: {session.get('_model_id')}")
-    if session.get("_size"):
-        rows.append(f"Size: {session.get('_size')}")
-    if session.get("_modified"):
-        rows.append(f"Modified: {session.get('_modified')}")
-    if session.get("_file"):
-        rows.append(f"Path: {session.get('_file')}")
-    return "\n".join(rows), None, len(rows), {}
-
-
-def open_llm_item(session: dict):
-    fp = Path(session.get("_file", ""))
-    if fp.exists():
-        os.startfile(str(fp))
-    elif session.get("_provider") == "Ollama" and OLLAMA_DIR.exists():
-        os.startfile(str(OLLAMA_DIR))
+DELETE_HANDLERS = {
+    "claude": delete_claude_session,
+    "codex": delete_codex_session,
+    "grok": delete_grok_session,
+}
 
 
 def load_settings() -> dict:
@@ -972,29 +953,20 @@ def load_sessions(settings: dict | None = None) -> list:
     settings = settings or load_settings()
     providers = settings.get("providers", {})
     sessions = []
-    if providers.get("claude", True):
-        sessions += load_claude_sessions()
-    if providers.get("codex", True):
-        sessions += load_codex_sessions()
-    if providers.get("grok", True):
-        sessions += load_grok_sessions()
-    if providers.get("ollama", True) or providers.get("lm_studio", True) or providers.get("grok", True):
-        sessions += load_llm_entries(settings)
+    for key, loader in SESSION_LOADERS.items():
+        if providers.get(key, provider_detected(key)):
+            sessions += loader()
     renames = load_renames()
     for s in sessions:
         if s["sessionId"] in renames:
             s["display"] = renames[s["sessionId"]]
+    sessions = [s for s in sessions if s.get("_resumable", False)]
     return sorted(sessions, key=lambda x: x["timestamp"], reverse=True)
 
 
 def get_session_preview(session: dict):
-    if session.get("_source") == "grok":
-        return get_grok_preview(session)
-    if session.get("_source") == "llm":
-        return get_llm_preview(session)
-    if session.get("_source") == "codex":
-        return get_codex_preview(session)
-    return get_claude_preview(session)
+    loader = PREVIEW_LOADERS.get(session.get("_source", "claude"), get_claude_preview)
+    return loader(session)
 
 
 # ── Launch helpers ────────────────────────────────────────────────────────────
@@ -1029,25 +1001,31 @@ def open_codex(project: str = ""):
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 
+RESUME_HANDLERS = {
+    "claude": resume_claude,
+    "codex": resume_codex,
+    "grok": resume_grok,
+}
+
+
 class SessionPortal:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Session Portal")
-        self.root.geometry("1440x810+0+0")
         self.root.minsize(1220, 640)
+        self.root.state("zoomed")
 
         self.settings = load_settings()
         self.all_sessions: list = []
         self.filtered_sessions: list = []
-        self.sort_var = tk.StringVar(value="Date ↓")
-        self.show_history_var = tk.BooleanVar(value=False)
-        self.source_var = tk.StringVar(value="Models")
+        self.sort_var = tk.StringVar(value="Newest")
+        self.source_var = tk.StringVar(value="All Models")
         self._delete_mode = False
         self._checked_ids: set = set()
 
         self._apply_theme()
         self._ensure_onboarding()
-        self._build_ui()
+        self._build_ui_modern()
         self._load_data()
         self.root.deiconify()
         self.root.lift()
@@ -1057,16 +1035,11 @@ class SessionPortal:
             self._show_onboarding(first_run=True)
 
     def _provider_detected(self, key: str) -> bool:
-        path = Path(PROVIDER_OPTIONS[key]["path"])
-        if key == "lm_studio":
-            return LM_STUDIO_DIR.exists() or LM_STUDIO_MODELS_DIR.exists()
-        if key == "ollama":
-            return OLLAMA_DIR.exists() or shutil.which("ollama") is not None
-        return path.exists()
+        return provider_detected(key)
 
     def _show_onboarding(self, first_run=False):
         dialog = tk.Toplevel(self.root)
-        dialog.title("Choose Sources")
+        dialog.title("Choose Scan Sources")
         dialog.configure(bg=self.bg)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -1074,7 +1047,7 @@ class SessionPortal:
 
         tk.Label(
             dialog,
-            text="Choose what Session Portal should discover",
+            text="Choose What Session Portal Should Discover",
             bg=self.bg,
             fg=self.blue,
             font=("Consolas", 12, "bold"),
@@ -1082,7 +1055,7 @@ class SessionPortal:
 
         tk.Label(
             dialog,
-            text="Choices are saved locally and used on every Refresh.",
+            text="Found sources can be enabled now. Other detected AI tools are listed below when session support is not available yet.",
             bg=self.bg,
             fg=self.muted,
             font=("Consolas", 9),
@@ -1117,6 +1090,33 @@ class SessionPortal:
                 font=("Consolas", 9),
             ).pack(side=tk.LEFT, padx=(10, 0))
 
+        other_tools = discover_other_ai_tools()
+        if other_tools:
+            tk.Label(
+                dialog,
+                text="Other Local AI Tools Found",
+                bg=self.bg,
+                fg=self.blue,
+                font=("Consolas", 10, "bold"),
+            ).pack(anchor="w", padx=18, pady=(12, 4))
+            for tool in other_tools:
+                row = tk.Frame(dialog, bg=self.surface, padx=10, pady=6)
+                row.pack(fill=tk.X, padx=18, pady=2)
+                tk.Label(
+                    row,
+                    text=tool["label"],
+                    bg=self.surface,
+                    fg=self.text,
+                    font=("Consolas", 10, "bold"),
+                ).pack(side=tk.LEFT)
+                tk.Label(
+                    row,
+                    text="detected; session resume support not available yet",
+                    bg=self.surface,
+                    fg=self.muted,
+                    font=("Consolas", 9),
+                ).pack(side=tk.LEFT, padx=(10, 0))
+
         btns = tk.Frame(dialog, bg=self.bg, pady=14, padx=18)
         btns.pack(fill=tk.X)
 
@@ -1136,7 +1136,7 @@ class SessionPortal:
 
         tk.Button(
             btns,
-            text="Found Only",
+            text="Select Found",
             command=select_found,
             bg=self.overlay,
             fg=self.text,
@@ -1171,33 +1171,44 @@ class SessionPortal:
         self.root.wait_window(dialog)
 
     def _apply_theme(self):
-        self.bg = "#1e1e2e"
-        self.surface = "#313244"
-        self.overlay = "#45475a"
-        self.muted = "#6c7086"
-        self.text = "#cdd6f4"
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+        palette = APP_PALETTE
+        self.font_family = "Consolas"
+        self.font_size = 10
+
+        self.bg = palette["bg"]
+        self.bg_deep = palette["bg_deep"]
+        self.surface = palette["surface"]
+        self.surface_2 = palette["surface_2"]
+        self.overlay = palette["overlay"]
+        self.bar = palette["bar"]
+        self.muted = palette["muted"]
+        self.text = palette["text"]
         self.blue = "#89b4fa"
         self.green = "#a6e3a1"
         self.yellow = "#f9e2af"
+        self.pink = "#ff99cc"
+        self.danger = "#f38ba8"
         self.root.configure(bg=self.bg)
 
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("TFrame", background=self.bg)
-        style.configure("TLabel", background=self.bg, foreground=self.text, font=("Consolas", 10))
+        style.configure("TLabel", background=self.bg, foreground=self.text, font=self._font())
         style.configure(
             "Treeview",
             background=self.surface,
             foreground=self.text,
             fieldbackground=self.surface,
-            font=("Consolas", 10),
-            rowheight=26,
+            font=self._font(),
+            rowheight=max(26, self.font_size + 18),
         )
         style.configure(
             "Treeview.Heading",
             background=self.overlay,
             foreground=self.text,
-            font=("Consolas", 10, "bold"),
+            font=self._font(weight="bold"),
             relief="flat",
         )
         style.map(
@@ -1213,24 +1224,376 @@ class SessionPortal:
             arrowcolor=self.text,
         )
 
+    def _font(self, delta: int = 0, weight: str | None = None):
+        size = max(8, self.font_size + delta)
+        return (self.font_family, size, weight) if weight else (self.font_family, size)
+
+    def _set_source_filter(self, label: str):
+        self.source_var.set(label)
+        self._apply_filter()
+
+    def _refresh_source_buttons(self):
+        if not hasattr(self, "source_buttons"):
+            return
+        for label, button in self.source_buttons.items():
+            active = self.source_var.get() == label
+            button.configure(
+                fg_color=self.blue if active else self.surface_2,
+                text_color=self.bg_deep if active else self.text,
+                hover_color=self.yellow if active else self.overlay,
+            )
+
+    def _source_filter_labels(self) -> list[str]:
+        labels = ["All Models"]
+        enabled = self.settings.get("providers", {})
+        session_sources = {s.get("_source") for s in self.all_sessions}
+        for key, info in PROVIDER_OPTIONS.items():
+            if key in session_sources or (enabled.get(key, True) and self._provider_detected(key)):
+                labels.append(info["label"])
+        return labels
+
+    def _build_source_buttons(self):
+        if not hasattr(self, "source_buttons_frame"):
+            return
+        for child in self.source_buttons_frame.winfo_children():
+            child.destroy()
+        self.source_buttons = {}
+        labels = self._source_filter_labels()
+        if self.source_var.get() not in labels:
+            self.source_var.set("All Models")
+        for label in labels:
+            btn = ctk.CTkButton(
+                self.source_buttons_frame,
+                text=label,
+                anchor="w",
+                height=34,
+                corner_radius=6,
+                font=self._font(1, "bold"),
+                command=lambda value=label: self._set_source_filter(value),
+            )
+            btn.pack(fill=tk.X, pady=3)
+            self.source_buttons[label] = btn
+        self._refresh_source_buttons()
+
+    def _build_ui_modern(self):
+        app = ctk.CTkFrame(self.root, fg_color=self.bg_deep, corner_radius=0)
+        app.pack(fill=tk.BOTH, expand=True)
+
+        sidebar = ctk.CTkFrame(app, width=178, fg_color=self.bg_deep, corner_radius=0)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+
+        ctk.CTkLabel(
+            sidebar,
+            text="Session\nPortal",
+            justify="left",
+            text_color=self.text,
+            font=self._font(10, "bold"),
+        ).pack(anchor="w", padx=18, pady=(20, 8))
+        ctk.CTkLabel(
+            sidebar,
+            text="Local AI Sessions",
+            text_color=self.text,
+            font=self._font(),
+        ).pack(anchor="w", padx=18, pady=(0, 20))
+
+        self.source_buttons_frame = ctk.CTkFrame(sidebar, fg_color=self.bg_deep, corner_radius=0)
+        self.source_buttons_frame.pack(fill=tk.X, padx=14)
+        self.source_buttons = {}
+        self._build_source_buttons()
+
+        ctk.CTkButton(
+            sidebar,
+            text="Scan Sources",
+            anchor="w",
+            height=34,
+            corner_radius=6,
+            fg_color=self.surface_2,
+            hover_color=self.overlay,
+            text_color=self.text,
+            font=self._font(1),
+            command=self._edit_sources,
+        ).pack(fill=tk.X, padx=14, pady=(20, 3))
+
+        ctk.CTkButton(
+            sidebar,
+            text="Refresh",
+            anchor="w",
+            height=34,
+            corner_radius=6,
+            fg_color=self.surface_2,
+            hover_color=self.overlay,
+            text_color=self.text,
+            font=self._font(1),
+            command=self._load_data,
+        ).pack(fill=tk.X, padx=14, pady=3)
+
+        workspace = ctk.CTkFrame(app, fg_color=self.bg, corner_radius=0)
+        workspace.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        header = ctk.CTkFrame(workspace, fg_color=self.bg, corner_radius=0)
+        header.pack(fill=tk.X, padx=14, pady=(14, 6))
+        ctk.CTkLabel(
+            header,
+            text="Sessions",
+            text_color=self.text,
+            font=self._font(8, "bold"),
+        ).pack(side=tk.LEFT)
+        self.count_label = ctk.CTkLabel(header, text="", text_color=self.text, font=self._font())
+        self.count_label.pack(side=tk.RIGHT)
+
+        self.top_bar = ctk.CTkFrame(workspace, fg_color=self.bg, corner_radius=0)
+        self.top_bar.pack(fill=tk.X, padx=14, pady=(0, 8))
+        top = self.top_bar
+
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", self._on_search)
+        self.search_entry = ctk.CTkEntry(
+            top,
+            textvariable=self.search_var,
+            height=38,
+            corner_radius=6,
+            fg_color=self.surface,
+            border_width=0,
+            text_color=self.text,
+            placeholder_text="Search by project or prompt",
+            placeholder_text_color=self.muted,
+            font=self._font(2),
+        )
+        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+        self.search_entry.focus()
+
+        sort_menu = ctk.CTkOptionMenu(
+            top,
+            variable=self.sort_var,
+            values=["Newest", "Oldest", "Project A-Z", "Project Z-A"],
+            command=lambda _: self._apply_filter(),
+            width=142,
+            height=38,
+            corner_radius=6,
+            fg_color=self.surface,
+            button_color=self.overlay,
+            button_hover_color=self.blue,
+            dropdown_fg_color=self.surface,
+            dropdown_hover_color=self.overlay,
+            text_color=self.text,
+            font=self._font(1),
+        )
+        sort_menu.pack(side=tk.RIGHT)
+
+        self.delete_bar = tk.Frame(workspace, bg=self.overlay, pady=6, padx=12)
+        tk.Label(self.delete_bar, text="DELETE MODE",
+                 bg=self.overlay, fg=self.text,
+                 font=self._font(weight="bold")).pack(side=tk.LEFT, padx=(0, 12))
+        self.select_all_btn = tk.Button(
+            self.delete_bar,
+            text="Select All",
+            bg=self.overlay,
+            fg=self.text,
+            activebackground=self.surface_2,
+            font=self._font(),
+            relief=tk.FLAT,
+            padx=10,
+            pady=2,
+            cursor="hand2",
+            command=self._toggle_select_all,
+        )
+        self.select_all_btn.pack(side=tk.LEFT)
+        self.confirm_delete_btn = tk.Button(
+            self.delete_bar,
+            text="Delete 0 Selected",
+            bg=self.bg,
+            fg=self.danger,
+            activebackground=self.surface,
+            font=self._font(weight="bold"),
+            relief=tk.FLAT,
+            padx=12,
+            pady=2,
+            cursor="hand2",
+            command=self._confirm_delete,
+            state=tk.DISABLED,
+        )
+        self.confirm_delete_btn.pack(side=tk.RIGHT)
+        tk.Button(
+            self.delete_bar,
+            text="Cancel",
+            bg=self.overlay,
+            fg=self.text,
+            activebackground=self.surface_2,
+            font=self._font(),
+            relief=tk.FLAT,
+            padx=10,
+            pady=2,
+            cursor="hand2",
+            command=self._exit_delete_mode,
+        ).pack(side=tk.RIGHT, padx=(0, 8))
+
+        self.paned = tk.PanedWindow(workspace, orient=tk.HORIZONTAL,
+                                    bg=self.bg, sashwidth=5, sashpad=0,
+                                    relief=tk.FLAT, borderwidth=0)
+        self.paned.pack(fill=tk.BOTH, expand=True, padx=14, pady=(0, 8))
+        paned = self.paned
+
+        list_frame = tk.Frame(paned, bg=self.bg)
+        paned.add(list_frame, width=930, minsize=700)
+
+        list_header = tk.Frame(list_frame, bg=self.bg, pady=4)
+        list_header.pack(fill=tk.X)
+        tk.Label(
+            list_header,
+            text="Session List",
+            bg=self.bg,
+            fg=self.blue,
+            font=self._font(1, "bold"),
+        ).pack(side=tk.LEFT)
+        tk.Label(
+            list_header,
+            text="Numbered, filtered, and sorted.",
+            bg=self.bg,
+            fg=self.text,
+            font=self._font(-1),
+        ).pack(side=tk.LEFT, padx=(10, 0))
+
+        self.tree = ttk.Treeview(
+            list_frame,
+            columns=("check", "number", "source", "project", "date", "preview"),
+            show="headings",
+            selectmode="browse",
+        )
+        self.tree.heading("check", text="", anchor=tk.W)
+        self.tree.heading("number", text="#", anchor=tk.E)
+        self.tree.heading("source", text="Source", anchor=tk.W)
+        self.tree.heading("project", text="Project", anchor=tk.W)
+        self.tree.heading("date", text="Date", anchor=tk.W)
+        self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W)
+        self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
+        self.tree.column("number", width=42, minwidth=38, stretch=False, anchor=tk.E)
+        self.tree.column("source", width=58, minwidth=50, stretch=False, anchor=tk.W)
+        self.tree.column("project", width=150, minwidth=90, stretch=False, anchor=tk.W)
+        self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
+        self.tree.column("preview", width=520, minwidth=300, anchor=tk.W)
+
+        vsb = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=vsb.set)
+        self.tree.tag_configure("gone", foreground=self.muted)
+        self.tree.tag_configure("codex", foreground=self.yellow)
+        self.tree.tag_configure("grok", foreground=self.pink)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.tree.bind("<<TreeviewSelect>>", self._on_select)
+        self.tree.bind("<Button-1>", self._on_tree_click)
+        self.tree.bind("<Double-1>", self._on_action)
+        self.tree.bind("<Return>", self._on_action)
+        self.tree.bind("<Button-3>", self._on_right_click)
+
+        right = tk.Frame(paned, bg=self.bg)
+        paned.add(right, minsize=390)
+
+        preview_header = tk.Frame(right, bg=self.bg, pady=4)
+        preview_header.pack(fill=tk.X)
+        tk.Label(preview_header, text="Inspector", bg=self.bg, fg=self.blue,
+                 font=self._font(1, "bold")).pack(side=tk.LEFT)
+        tk.Label(preview_header, text="Metadata and first/last prompt.", bg=self.bg,
+                 fg=self.text, font=self._font(-1)).pack(side=tk.LEFT, padx=(10, 0))
+
+        self.preview = tk.Text(
+            right,
+            bg=self.surface,
+            fg=self.text,
+            font=self._font(),
+            wrap=tk.WORD,
+            relief=tk.FLAT,
+            padx=12,
+            pady=10,
+            state=tk.DISABLED,
+            cursor="arrow",
+        )
+        self.preview.pack(fill=tk.BOTH, expand=True)
+        self.preview.tag_configure("label", foreground=self.blue, font=self._font(weight="bold"))
+        self.preview.tag_configure("dim", foreground=self.muted)
+        self.preview.tag_configure("message", foreground=self.green)
+        self.preview.tag_configure("codex", foreground=self.yellow)
+        self.preview.tag_configure("grok", foreground=self.pink)
+
+        btn_frame = ctk.CTkFrame(right, fg_color=self.bg, corner_radius=0)
+        btn_frame.pack(fill=tk.X)
+        self.action_btn = ctk.CTkButton(
+            btn_frame,
+            text="Resume Session",
+            fg_color=self.blue,
+            hover_color=self.yellow,
+            text_color=self.bg_deep,
+            font=self._font(1, "bold"),
+            corner_radius=6,
+            height=40,
+            width=164,
+            command=self._on_action,
+            state=tk.DISABLED,
+        )
+        self.action_btn.pack(side=tk.RIGHT, pady=8)
+        self.rename_btn = ctk.CTkButton(
+            btn_frame,
+            text="Rename",
+            fg_color=self.surface_2,
+            hover_color=self.overlay,
+            text_color=self.text,
+            font=self._font(),
+            corner_radius=6,
+            height=40,
+            width=88,
+            command=self._rename_session,
+            state=tk.DISABLED,
+        )
+        self.rename_btn.pack(side=tk.LEFT, pady=8)
+        self.delete_btn = ctk.CTkButton(
+            btn_frame,
+            text="Delete",
+            fg_color=self.danger,
+            hover_color="#ff9ab3",
+            text_color=self.bg_deep,
+            font=self._font(weight="bold"),
+            corner_radius=6,
+            height=40,
+            width=88,
+            command=self._enter_delete_mode,
+            state=tk.DISABLED,
+        )
+        self.delete_btn.pack(side=tk.LEFT, padx=(6, 0), pady=8)
+
+        bar = tk.Frame(workspace, bg=self.bar, pady=4)
+        bar.pack(fill=tk.X, side=tk.BOTTOM)
+        tk.Label(
+            bar,
+            text="  Double-click or Enter to act  |  r refresh  |  q quit",
+            bg=self.bar,
+            fg=self.text,
+            font=self._font(-1),
+        ).pack(side=tk.LEFT)
+
+        self.root.bind("<r>", lambda e: self._load_data() if not self._delete_mode else None)
+        self.root.bind("q", lambda e: self.root.quit())
+        self.root.bind("<Escape>", lambda e: self._exit_delete_mode() if self._delete_mode else None)
+        self._refresh_source_buttons()
+
     def _build_ui(self):
-        header = tk.Frame(self.root, bg="#181825", pady=9, padx=14)
+        header = tk.Frame(self.root, bg=self.bar, pady=9, padx=14)
         header.pack(fill=tk.X)
         tk.Label(
             header,
             text="Session Portal",
-            bg="#181825",
+            bg=self.bar,
             fg=self.text,
             font=("Consolas", 14, "bold"),
         ).pack(side=tk.LEFT)
         tk.Label(
             header,
-            text="Claude  |  Codex  |  Grok",
-            bg="#181825",
+            text="Dynamic local session sources",
+            bg=self.bar,
             fg=self.muted,
             font=("Consolas", 9),
         ).pack(side=tk.LEFT, padx=(12, 0))
-        self.count_label = tk.Label(header, text="", bg="#181825", fg=self.muted,
+        self.count_label = tk.Label(header, text="", bg=self.bar, fg=self.text,
                                     font=("Consolas", 10))
         self.count_label.pack(side=tk.RIGHT)
 
@@ -1268,7 +1631,7 @@ class SessionPortal:
         sort_menu.pack(side=tk.RIGHT, padx=(8, 4))
 
         source_menu = tk.OptionMenu(top, self.source_var,
-                                    "Models", "Claude", "Codex", "Grok", "Ollama",
+                                    *self._source_filter_labels(),
                                     command=lambda _: self._apply_filter())
         source_menu.config(bg=self.surface, fg=self.text, activebackground=self.overlay,
                            activeforeground=self.text, highlightthickness=0,
@@ -1293,25 +1656,9 @@ class SessionPortal:
             command=self._load_data,
         ).pack(side=tk.RIGHT, padx=(0, 4))
 
-        self.history_btn = tk.Button(
-            top,
-            text="History: OFF",
-            bg=self.overlay,
-            fg=self.muted,
-            activebackground=self.surface,
-            activeforeground=self.text,
-            font=("Consolas", 10),
-            relief=tk.FLAT,
-            padx=10,
-            pady=2,
-            cursor="hand2",
-            command=self._toggle_history,
-        )
-        self.history_btn.pack(side=tk.RIGHT, padx=(0, 4))
-
         tk.Button(
             top,
-            text="Sources",
+            text="Scan Sources",
             bg=self.overlay,
             fg=self.text,
             activebackground=self.surface,
@@ -1324,16 +1671,16 @@ class SessionPortal:
             command=self._edit_sources,
         ).pack(side=tk.RIGHT, padx=(0, 4))
 
-        self.delete_bar = tk.Frame(self.root, bg="#45475a", pady=6, padx=12)
+        self.delete_bar = tk.Frame(self.root, bg=self.overlay, pady=6, padx=12)
         tk.Label(self.delete_bar, text="DELETE MODE",
-                 bg="#45475a", fg=self.bg,
+                 bg=self.overlay, fg=self.text,
                  font=("Consolas", 10, "bold")).pack(side=tk.LEFT, padx=(0, 12))
         self.select_all_btn = tk.Button(
             self.delete_bar,
             text="Select All",
-            bg="#45475a",
-            fg=self.bg,
-            activebackground=self.overlay,
+            bg=self.overlay,
+            fg=self.text,
+            activebackground=self.surface_2,
             font=("Consolas", 10),
             relief=tk.FLAT,
             padx=10,
@@ -1360,9 +1707,9 @@ class SessionPortal:
         tk.Button(
             self.delete_bar,
             text="Cancel",
-            bg="#45475a",
-            fg=self.bg,
-            activebackground=self.overlay,
+            bg=self.overlay,
+            fg=self.text,
+            activebackground=self.surface_2,
             font=("Consolas", 10),
             relief=tk.FLAT,
             padx=10,
@@ -1391,7 +1738,7 @@ class SessionPortal:
         ).pack(side=tk.LEFT)
         tk.Label(
             list_header,
-            text="filtered, sorted, numbered",
+            text="Filtered, sorted, and numbered.",
             bg=self.bg,
             fg=self.muted,
             font=("Consolas", 9),
@@ -1403,25 +1750,24 @@ class SessionPortal:
             show="headings",
             selectmode="browse",
         )
-        self.tree.heading("check", text="")
-        self.tree.heading("number", text="#")
-        self.tree.heading("source", text="Source")
-        self.tree.heading("project", text="Project")
-        self.tree.heading("date", text="Date")
-        self.tree.heading("preview", text="Thread / Last Prompt")
-        self.tree.column("check", width=0, minwidth=0, stretch=False)
+        self.tree.heading("check", text="", anchor=tk.W)
+        self.tree.heading("number", text="#", anchor=tk.E)
+        self.tree.heading("source", text="Source", anchor=tk.W)
+        self.tree.heading("project", text="Project", anchor=tk.W)
+        self.tree.heading("date", text="Date", anchor=tk.W)
+        self.tree.heading("preview", text="Thread / Last Prompt", anchor=tk.W)
+        self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=44, minwidth=38, stretch=False, anchor=tk.E)
-        self.tree.column("source", width=58, minwidth=50, stretch=False)
-        self.tree.column("project", width=150, minwidth=90, stretch=False)
-        self.tree.column("date", width=135, minwidth=100, stretch=False)
-        self.tree.column("preview", width=480, minwidth=260)
+        self.tree.column("source", width=58, minwidth=50, stretch=False, anchor=tk.W)
+        self.tree.column("project", width=150, minwidth=90, stretch=False, anchor=tk.W)
+        self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
+        self.tree.column("preview", width=480, minwidth=260, anchor=tk.W)
 
         vsb = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
-        self.tree.tag_configure("gone", foreground="#45475a")
+        self.tree.tag_configure("gone", foreground=self.muted)
         self.tree.tag_configure("codex", foreground=self.yellow)
         self.tree.tag_configure("grok", foreground="#ff99cc")
-        self.tree.tag_configure("llm", foreground=self.blue)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -1438,7 +1784,7 @@ class SessionPortal:
         preview_header.pack(fill=tk.X)
         tk.Label(preview_header, text="Preview", bg=self.bg, fg=self.blue,
                  font=("Consolas", 11, "bold")).pack(side=tk.LEFT)
-        tk.Label(preview_header, text="metadata and first/last prompt", bg=self.bg,
+        tk.Label(preview_header, text="Metadata and first/last prompt.", bg=self.bg,
                  fg=self.muted, font=("Consolas", 9)).pack(side=tk.LEFT, padx=(10, 0))
 
         self.preview = tk.Text(
@@ -1504,13 +1850,13 @@ class SessionPortal:
         )
         self.delete_btn.pack(side=tk.LEFT, padx=(6, 0))
 
-        bar = tk.Frame(self.root, bg="#181825", pady=4)
+        bar = tk.Frame(self.root, bg=self.bar, pady=4)
         bar.pack(fill=tk.X, side=tk.BOTTOM)
         tk.Label(
             bar,
             text="  Double-click or Enter to act  |  r refresh  |  q quit",
-            bg="#181825",
-            fg=self.muted,
+            bg=self.bar,
+            fg=self.text,
             font=("Consolas", 9),
         ).pack(side=tk.LEFT)
 
@@ -1521,38 +1867,25 @@ class SessionPortal:
     def _load_data(self):
         self.settings = load_settings()
         self.all_sessions = load_sessions(self.settings)
+        self._build_source_buttons()
         self._apply_filter()
 
     def _edit_sources(self):
         self._show_onboarding(first_run=False)
         self._load_data()
 
-    def _toggle_history(self):
-        self.show_history_var.set(not self.show_history_var.get())
-        on = self.show_history_var.get()
-        self.history_btn.config(text="History: ON" if on else "History: OFF",
-                                fg=self.blue if on else self.muted)
-        self._apply_filter()
-
     def _on_search(self, *_):
         self._apply_filter()
 
     def _apply_filter(self):
-        show_history = self.show_history_var.get()
         source_filter = self.source_var.get()
         query = self.search_var.get().lower()
 
         pool = self.all_sessions
 
-        if source_filter == "Claude":
-            pool = [s for s in pool if s.get("_source") == "claude"]
-        elif source_filter == "Codex":
-            pool = [s for s in pool if s.get("_source") == "codex"]
-        elif source_filter == "Grok":
-            pool = [s for s in pool if s.get("_source") == "grok"]
-        elif source_filter == "Ollama":
-            pool = [s for s in pool if s.get("_source") == "llm"]
-
+        source_key = provider_key_for_label(source_filter)
+        if source_key:
+            pool = [s for s in pool if s.get("_source") == source_key]
         if query:
             pool = [
                 s for s in pool
@@ -1560,31 +1893,30 @@ class SessionPortal:
                 or query in s.get("display", "").lower()
             ]
 
-        if not show_history:
-            pool = [s for s in pool
-                    if s.get("_source") in ("codex", "grok", "llm") or s.get("_resumable", False)]
-
         sort = self.sort_var.get()
-        if sort == "Date ↓":
+        if sort in ("Newest", "Date ↓"):
             pool = sorted(pool, key=lambda s: s.get("timestamp", 0), reverse=True)
-        elif sort == "Date ↑":
+        elif sort in ("Oldest", "Date ↑"):
             pool = sorted(pool, key=lambda s: s.get("timestamp", 0))
-        elif sort == "Project A→Z":
+        elif sort in ("Project A-Z", "Project A→Z"):
             pool = sorted(pool, key=lambda s: os.path.basename(s.get("project", "")).lower())
-        elif sort == "Project Z→A":
+        elif sort in ("Project Z-A", "Project Z→A"):
             pool = sorted(pool, key=lambda s: os.path.basename(s.get("project", "")).lower(), reverse=True)
 
         self.filtered_sessions = pool
         self._refresh_list()
+        self._refresh_source_buttons()
 
         total = len(self.all_sessions)
         shown = len(self.filtered_sessions)
-        n_claude = sum(1 for s in self.filtered_sessions if s.get("_source") == "claude")
-        n_codex = sum(1 for s in self.filtered_sessions if s.get("_source") == "codex")
-        n_grok = sum(1 for s in self.filtered_sessions if s.get("_source") == "grok")
-        n_llm = sum(1 for s in self.filtered_sessions if s.get("_source") == "llm")
-        self.count_label.config(
-            text=f"{shown} of {total} shown  |  Claude {n_claude}  Codex {n_codex}  Grok {n_grok}  Ollama {n_llm}"
+        counts = []
+        for key, info in PROVIDER_OPTIONS.items():
+            count = sum(1 for s in self.filtered_sessions if s.get("_source") == key)
+            if count:
+                counts.append(f"{info['label']} {count}")
+        count_text = "  ".join(counts)
+        self.count_label.configure(
+            text=f"{shown} of {total} shown" + (f"  |  {count_text}" if count_text else "")
         )
 
     def _refresh_list(self):
@@ -1599,25 +1931,14 @@ class SessionPortal:
             date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M") if ts else ""
             display = (display_title or "")[:90]
 
-            if src == "llm":
-                tag = ("llm",)
-            elif src == "grok":
+            if src == "grok":
                 tag = ("grok",)
             elif src == "codex":
                 tag = ("codex",)
-            elif not s.get("_resumable", True):
-                tag = ("gone",)
             else:
                 tag = ()
 
-            if src == "llm":
-                source_label = "Ollama"
-            elif src == "grok":
-                source_label = "Grok"
-            elif src == "codex":
-                source_label = "Codex"
-            else:
-                source_label = "Claude"
+            source_label = provider_label(src)
             check = "x" if s["sessionId"] in self._checked_ids else ""
             self.tree.insert("", tk.END, iid=s["sessionId"],
                              values=(check, row_num, source_label, project_short, date_str, display),
@@ -1636,35 +1957,20 @@ class SessionPortal:
         self._show_preview(session)
 
         src = session.get("_source", "claude")
-        if src == "llm":
-            self.action_btn.config(text="Open Ollama History", bg=self.blue,
-                                   fg=self.bg, state=tk.NORMAL)
-            self.rename_btn.config(state=tk.DISABLED)
-            self.delete_btn.config(state=tk.DISABLED)
-            return
-        if src == "grok" and session.get("_resumable"):
-            self.action_btn.config(text="Resume Grok", bg="#ff99cc",
-                                   fg=self.bg, state=tk.NORMAL)
-        elif src == "grok":
-            self.action_btn.config(text="Open Grok History", bg="#ff99cc",
-                                   fg=self.bg, state=tk.NORMAL)
-            self.rename_btn.config(state=tk.DISABLED)
-            self.delete_btn.config(state=tk.DISABLED)
-            return
-        if src == "codex" and session.get("_resumable"):
-            self.action_btn.config(text="Resume Codex", bg=self.yellow,
-                                   fg=self.bg, state=tk.NORMAL)
+        if src == "grok":
+            self.action_btn.configure(text="Resume Grok", fg_color=self.pink,
+                                      text_color=self.bg_deep, state=tk.NORMAL)
         elif src == "codex":
-            self.action_btn.config(text="Resume Codex", bg=self.yellow,
-                                   fg=self.bg, state=tk.DISABLED)
-        elif src == "claude" and session.get("_resumable"):
-            self.action_btn.config(text="Resume Session", bg=self.blue,
-                                   fg=self.bg, state=tk.NORMAL)
+            self.action_btn.configure(text="Resume Codex", fg_color=self.yellow,
+                                      text_color=self.bg_deep, state=tk.NORMAL)
+        elif src == "claude":
+            self.action_btn.configure(text="Resume Session", fg_color=self.blue,
+                                      text_color=self.bg_deep, state=tk.NORMAL)
         else:
-            self.action_btn.config(text="Resume Session", bg=self.blue,
-                                   fg=self.bg, state=tk.DISABLED)
-        self.rename_btn.config(state=tk.NORMAL)
-        self.delete_btn.config(state=tk.NORMAL)
+            self.action_btn.configure(text=f"Resume {provider_label(src)}", fg_color=self.blue,
+                                      text_color=self.bg_deep, state=tk.NORMAL if src in RESUME_HANDLERS else tk.DISABLED)
+        self.rename_btn.configure(state=tk.NORMAL)
+        self.delete_btn.configure(state=tk.NORMAL)
 
     def _show_preview(self, session: dict):
         first, last, count, tokens = get_session_preview(session)
@@ -1673,9 +1979,7 @@ class SessionPortal:
         self.preview.delete("1.0", tk.END)
 
         src = session.get("_source", "claude")
-        if src == "llm":
-            src_tag = "llm"
-        elif src == "grok":
+        if src == "grok":
             src_tag = "grok"
         elif src == "codex":
             src_tag = "codex"
@@ -1683,46 +1987,33 @@ class SessionPortal:
             src_tag = "dim"
 
         def row(label, value, tag="dim"):
-            self.preview.insert(tk.END, f"{label:<14}", "label")
+            value = " ".join(str(value or "").split())
+            self.preview.insert(tk.END, f"{label:<11}", "label")
             self.preview.insert(tk.END, f"{value}\n", tag)
 
         ts = session.get("timestamp", 0)
         date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M:%S") if ts else ""
 
-        if src == "llm":
-            row("Source", "Ollama", src_tag)
-        elif src == "grok":
-            row("Source", "Grok", src_tag)
-        else:
-            row("Source", "Codex" if src == "codex" else "Claude", src_tag)
+        row("Source", provider_label(src), src_tag)
         if session.get("display"):
             row("Title", session.get("display", ""), src_tag)
         row("Project", session.get("project", ""))
-        row("Session ID", session.get("sessionId", ""))
+        row("Session", session.get("sessionId", ""))
         row("Date", date_str)
 
-        if src == "llm":
-            row("Provider", session.get("_provider", ""), src_tag)
-            row("Status", session.get("_status", ""), src_tag)
-            row("Details", str(count))
-        elif src == "grok":
+        if src == "grok":
             row("Messages", str(count))
         elif src == "codex":
             row("Thread", session.get("display", ""), "codex")
             row("Messages", str(count) if "_file" in session else "n/a")
         else:
-            row("Messages", str(count) if session.get("_resumable") else "n/a (file cleaned up)")
+            row("Messages", str(count))
 
         if tokens.get("input") or tokens.get("output"):
             total = tokens["input"] + tokens["output"]
             row("Tokens", f"{total:,}  (in {tokens['input']:,}  out {tokens['output']:,})")
             if tokens.get("cache_read") or tokens.get("cache_write"):
                 row("Cache", f"read {tokens['cache_read']:,}  write {tokens.get('cache_write', 0):,}")
-
-        if src == "claude" and not session.get("_resumable"):
-            self.preview.insert(tk.END, "\n⚠  Conversation file no longer on disk — history only.\n", "dim")
-        elif src == "codex" and not session.get("_resumable"):
-            self.preview.insert(tk.END, "\n⚠  Session file not found — cannot resume.\n", "codex")
 
         if first:
             self.preview.insert(tk.END, "\n── First message ──\n", "label")
@@ -1750,16 +2041,9 @@ class SessionPortal:
 
         src = session.get("_source", "claude")
         try:
-            if src == "llm":
-                open_llm_item(session)
-            elif src == "grok" and session.get("_resumable"):
-                resume_grok(session.get("project", ""), sid)
-            elif src == "grok":
-                open_grok_file(session)
-            elif src == "codex" and session.get("_resumable"):
-                resume_codex(session.get("project", ""), sid)
-            elif src == "claude" and session.get("_resumable"):
-                resume_claude(session.get("project", "C:\\"), sid)
+            handler = RESUME_HANDLERS.get(src)
+            if handler:
+                handler(session.get("project", str(Path.home())), sid)
         except Exception as exc:
             messagebox.showerror("Action failed", str(exc))
 
@@ -1769,10 +2053,6 @@ class SessionPortal:
         row = self.tree.identify_row(event.y)
         if not row:
             return
-        session = next((s for s in self.filtered_sessions if s["sessionId"] == row), None)
-        if session and (session.get("_source") in ("llm",)
-                        or (session.get("_source") == "grok" and not session.get("_resumable"))):
-            return "break"
         if row in self._checked_ids:
             self._checked_ids.discard(row)
         else:
@@ -1789,20 +2069,6 @@ class SessionPortal:
             return
         self.tree.selection_set(row)
         self._on_select()
-        session = next((s for s in self.filtered_sessions if s["sessionId"] == row), None)
-        if session and (session.get("_source") in ("llm",)
-                        or (session.get("_source") == "grok" and not session.get("_resumable"))):
-            menu = tk.Menu(self.root, tearoff=0,
-                           bg=self.surface, fg=self.text,
-                           activebackground=self.overlay, activeforeground=self.text,
-                           font=("Consolas", 10))
-            if session.get("_source") == "llm":
-                label = "Open Ollama History"
-            elif session.get("_source") == "grok":
-                label = "Open Grok History"
-            menu.add_command(label=label, command=self._on_action)
-            menu.tk_popup(event.x_root, event.y_root)
-            return
         n = len(self.filtered_sessions)
         menu = tk.Menu(self.root, tearoff=0,
                        bg=self.surface, fg=self.text,
@@ -1847,9 +2113,7 @@ class SessionPortal:
         self._delete_mode = True
         self._checked_ids = set()
         if pre_check_all:
-            self._checked_ids = {s["sessionId"] for s in self.filtered_sessions
-                                 if s.get("_source") not in ("llm",)
-                                 and not (s.get("_source") == "grok" and not s.get("_resumable"))}
+            self._checked_ids = {s["sessionId"] for s in self.filtered_sessions}
         elif pre_check_sid:
             self._checked_ids = {pre_check_sid}
         else:
@@ -1858,9 +2122,9 @@ class SessionPortal:
                 self._checked_ids = {sel[0]}
         self.delete_bar.pack(fill=tk.X, after=self.top_bar)
         self.tree.column("check", width=45, minwidth=45)
-        self.delete_btn.config(state=tk.DISABLED)
-        self.rename_btn.config(state=tk.DISABLED)
-        self.action_btn.config(state=tk.DISABLED)
+        self.delete_btn.configure(state=tk.DISABLED)
+        self.rename_btn.configure(state=tk.DISABLED)
+        self.action_btn.configure(state=tk.DISABLED)
         self._refresh_list()
         self._update_delete_bar()
 
@@ -1870,18 +2134,16 @@ class SessionPortal:
         self.delete_bar.pack_forget()
         self.tree.column("check", width=0, minwidth=0)
         self._refresh_list()
-        self.delete_btn.config(state=tk.DISABLED)
-        self.rename_btn.config(state=tk.DISABLED)
-        self.action_btn.config(state=tk.DISABLED)
+        self.delete_btn.configure(state=tk.DISABLED)
+        self.rename_btn.configure(state=tk.DISABLED)
+        self.action_btn.configure(state=tk.DISABLED)
 
     def _toggle_select_all(self):
         total = len(self.filtered_sessions)
         if len(self._checked_ids) >= total:
             self._checked_ids = set()
         else:
-            self._checked_ids = {s["sessionId"] for s in self.filtered_sessions
-                                 if s.get("_source") not in ("llm",)
-                                 and not (s.get("_source") == "grok" and not s.get("_resumable"))}
+            self._checked_ids = {s["sessionId"] for s in self.filtered_sessions}
         self._update_delete_bar()
         self._refresh_list()
 
@@ -1898,9 +2160,7 @@ class SessionPortal:
 
     def _confirm_delete(self):
         to_delete = [s for s in self.filtered_sessions
-                     if s["sessionId"] in self._checked_ids
-                     and s.get("_source") not in ("llm",)
-                     and not (s.get("_source") == "grok" and not s.get("_resumable"))]
+                     if s["sessionId"] in self._checked_ids]
         n = len(to_delete)
         if n == 0:
             return
@@ -1912,12 +2172,8 @@ class SessionPortal:
         renames = load_renames()
         for session in to_delete:
             src = session.get("_source", "claude")
-            if src == "codex":
-                delete_codex_session(session)
-            elif src == "grok":
-                delete_grok_session(session)
-            else:
-                delete_claude_session(session)
+            handler = DELETE_HANDLERS.get(src, delete_claude_session)
+            handler(session)
             renames.pop(session["sessionId"], None)
         save_renames(renames)
         self._exit_delete_mode()

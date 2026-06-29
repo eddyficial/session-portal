@@ -3,3 +3,8 @@ Codebase/renames.json
 Codebase/__pycache__/
 __pycache__/
 *.py[cod]
+Reviewer Report.md
+QA.md
+Functional Test Report.md
+Coverage.md
+Defect Handoff.md
