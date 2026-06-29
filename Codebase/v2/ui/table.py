@@ -37,7 +37,7 @@ def build_table(app, parent):
         selectmode="browse",
     )
     app.tree.heading("check", text="", anchor=tk.W)
-    app.tree.heading("number", text="#", anchor=tk.E,
+    app.tree.heading("number", text="#", anchor=tk.CENTER,
                      command=lambda: app._toggle_sort("Oldest", "Newest"))
     app.tree.heading("source", text="LLM", anchor=tk.W,
                      command=lambda: app._toggle_sort("LLM A-Z", "LLM Z-A"))
@@ -50,7 +50,7 @@ def build_table(app, parent):
     app.tree.heading("preview", text="    Thread / Last Prompt", anchor=tk.W,
                      command=lambda: app._toggle_sort("Prompt A-Z", "Prompt Z-A"))
     app.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
-    app.tree.column("number", width=42, minwidth=38, stretch=False, anchor=tk.E)
+    app.tree.column("number", width=42, minwidth=38, stretch=False, anchor=tk.CENTER)
     app.tree.column("source", width=230, minwidth=180, stretch=False, anchor=tk.W)
     app.tree.column("project", width=250, minwidth=160, stretch=False, anchor=tk.W)
     app.tree.column("date", width=165, minwidth=150, stretch=False, anchor=tk.W)
