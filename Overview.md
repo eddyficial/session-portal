@@ -15,6 +15,8 @@ Session Portal is a local CustomTkinter desktop app for browsing, previewing, re
 - README: `App/README.md`
 - Codebase: `Codebase/README.md`
 - Launcher: `Codebase/session_portal.pyw`
+- One-step installer: `install.ps1`
+- Repo-folder launcher: `launch_session_portal.bat`
 
 ## Run
 
@@ -25,21 +27,21 @@ git clone https://github.com/eddyficial/session-portal.git
 cd session-portal
 ```
 
+Install dependencies and create a Desktop shortcut:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+After install, use the Desktop shortcut named **Session Portal** for future launches.
+
+Manual no-console launch:
+
 ```powershell
 pyw .\Codebase\session_portal.pyw
 ```
 
-Install the UI dependency if needed:
-
-```powershell
-py -3 -m pip install -r .\Codebase\requirements.txt
-```
-
-Optional desktop shortcut:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
-```
+Users can also double-click `launch_session_portal.bat` from the repo folder.
 
 Uninstall shortcut:
 
@@ -61,7 +63,10 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Resumable Grok session rows launch Grok with `grok --resume`.
 - Resumable Copilot session rows launch GitHub Copilot CLI with `gh copilot -- --resume=<session-id>`.
 - Basic use flow is documented in the public README: launch, choose providers, search/filter/sort, inspect, resume, rename, delete, refresh, and toggle Auto Scan.
+- Public README now explains rename and resume step by step: select a row, confirm inspector metadata, use **Rename** for local display names, or use the green provider-specific resume button/double-click/Enter to reopen the terminal chat session.
 - Delete mode requires explicit row selection plus a confirmation dialog; Esc or Cancel exits without deleting.
+- The `Msgs` column shows useful human message counts and can be sorted from the header or sort menu.
+- **Clean Empty Msgs** deletes only currently shown 0-message sessions after confirmation, respecting active search, provider, and date filters.
 - Non-resumable rows are excluded, including cleaned-up history-only records and missing session files.
 - Session rows are numbered in the current filtered and sorted order for quick reference.
 - The session table uses a singular `LLM` column and shows the actual recorded LLM name when available.
@@ -82,6 +87,8 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Local AI Workspace` labels the sidebar subtitle.
 - Session table headings and row values use explicit anchors so each label lines up with its column content.
 - The session table uses fixed readable column widths and a bottom horizontal scrollbar so long prompts can be read without hiding the LLM, Project, or Date columns.
+- The Date column is wide enough for the full `YYYY-MM-DD HH:MM` value.
+- The `Msgs` column is a compact fixed-width column for session message counts.
 - The layout gives the session table the primary width and keeps the right inspector compact by default.
 - The top search area is aligned to the session-table width; date and sort controls sit in the compact inspector-side rail.
 - The app uses one fixed high-contrast theme; runtime theme switching is intentionally removed to avoid restart delays.

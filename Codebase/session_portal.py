@@ -1033,6 +1033,18 @@ def get_session_preview(session: dict):
     return loader(session)
 
 
+def get_session_message_count(session: dict) -> int:
+    cached = session.get("_message_count")
+    if isinstance(cached, int):
+        return cached
+    try:
+        _first, _last, count, _tokens = get_session_preview(session)
+    except Exception:
+        count = 0
+    session["_message_count"] = count
+    return count
+
+
 # ── Launch helpers ────────────────────────────────────────────────────────────
 
 def resume_claude(project: str, sid: str):
@@ -1384,7 +1396,7 @@ class SessionPortal:
         app = ctk.CTkFrame(self.root, fg_color=self.bg_deep, corner_radius=0)
         app.pack(fill=tk.BOTH, expand=True)
 
-        sidebar = ctk.CTkFrame(app, width=178, fg_color=self.bg_deep, corner_radius=0)
+        sidebar = ctk.CTkFrame(app, width=196, fg_color=self.bg_deep, corner_radius=0)
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
         sidebar.pack_propagate(False)
 
@@ -1431,6 +1443,19 @@ class SessionPortal:
             text_color=self.text,
             font=self._font(1),
             command=self._load_data,
+        ).pack(fill=tk.X, padx=14, pady=3)
+
+        ctk.CTkButton(
+            sidebar,
+            text="Clean Empty Msgs",
+            anchor="w",
+            height=34,
+            corner_radius=6,
+            fg_color=self.surface_2,
+            hover_color=self.danger,
+            text_color=self.text,
+            font=self._font(1, "bold"),
+            command=self._delete_zero_message_sessions,
         ).pack(fill=tk.X, padx=14, pady=3)
 
         self.auto_scan_btn = ctk.CTkButton(
@@ -1512,6 +1537,8 @@ class SessionPortal:
                 "LLM Z-A",
                 "Project A-Z",
                 "Project Z-A",
+                "Msgs Low-High",
+                "Msgs High-Low",
                 "Prompt A-Z",
                 "Prompt Z-A",
             ],
@@ -1605,7 +1632,7 @@ class SessionPortal:
 
         self.tree = ttk.Treeview(
             list_frame,
-            columns=("check", "number", "source", "project", "date", "preview"),
+            columns=("check", "number", "source", "project", "date", "messages", "preview"),
             show="headings",
             selectmode="browse",
         )
@@ -1614,13 +1641,15 @@ class SessionPortal:
         self.tree.heading("source", text="LLM", anchor=tk.W, command=lambda: self._toggle_sort("LLM A-Z", "LLM Z-A"))
         self.tree.heading("project", text="Project", anchor=tk.W, command=lambda: self._toggle_sort("Project A-Z", "Project Z-A"))
         self.tree.heading("date", text="Date", anchor=tk.W, command=lambda: self._toggle_sort("Oldest", "Newest"))
+        self.tree.heading("messages", text="Msgs", anchor=tk.E, command=lambda: self._toggle_sort("Msgs Low-High", "Msgs High-Low"))
         self.tree.heading("preview", text="    Thread / Last Prompt", anchor=tk.W, command=lambda: self._toggle_sort("Prompt A-Z", "Prompt Z-A"))
         self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=42, minwidth=38, stretch=False, anchor=tk.E)
         self.tree.column("source", width=230, minwidth=180, stretch=False, anchor=tk.W)
         self.tree.column("project", width=250, minwidth=160, stretch=False, anchor=tk.W)
-        self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
-        self.tree.column("preview", width=950, minwidth=420, stretch=False, anchor=tk.W)
+        self.tree.column("date", width=165, minwidth=150, stretch=False, anchor=tk.W)
+        self.tree.column("messages", width=64, minwidth=56, stretch=False, anchor=tk.E)
+        self.tree.column("preview", width=856, minwidth=420, stretch=False, anchor=tk.W)
 
         vsb = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
         hsb = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
@@ -1730,7 +1759,7 @@ class SessionPortal:
         bar.pack(fill=tk.X, side=tk.BOTTOM)
         tk.Label(
             bar,
-            text="  Double-click or Enter to act  |  r refresh  |  q quit",
+            text="  Double-click or Enter to resume terminal chat session  |  r refresh  |  q quit",
             bg=self.bar,
             fg=self.text,
             font=self._font(-1),
@@ -1818,6 +1847,21 @@ class SessionPortal:
             pady=2,
             cursor="hand2",
             command=self._load_data,
+        ).pack(side=tk.RIGHT, padx=(0, 4))
+
+        tk.Button(
+            top,
+            text="Clean Empty Msgs",
+            bg=self.overlay,
+            fg=self.text,
+            activebackground=self.surface,
+            activeforeground=self.text,
+            font=("Consolas", 10, "bold"),
+            relief=tk.FLAT,
+            padx=10,
+            pady=2,
+            cursor="hand2",
+            command=self._delete_zero_message_sessions,
         ).pack(side=tk.RIGHT, padx=(0, 4))
 
         tk.Button(
@@ -1910,7 +1954,7 @@ class SessionPortal:
 
         self.tree = ttk.Treeview(
             list_frame,
-            columns=("check", "number", "source", "project", "date", "preview"),
+            columns=("check", "number", "source", "project", "date", "messages", "preview"),
             show="headings",
             selectmode="browse",
         )
@@ -1919,13 +1963,15 @@ class SessionPortal:
         self.tree.heading("source", text="LLM", anchor=tk.W)
         self.tree.heading("project", text="Project", anchor=tk.W)
         self.tree.heading("date", text="Date", anchor=tk.W)
+        self.tree.heading("messages", text="Msgs", anchor=tk.E)
         self.tree.heading("preview", text="    Thread / Last Prompt", anchor=tk.W)
         self.tree.column("check", width=0, minwidth=0, stretch=False, anchor=tk.W)
         self.tree.column("number", width=44, minwidth=38, stretch=False, anchor=tk.E)
         self.tree.column("source", width=230, minwidth=180, stretch=False, anchor=tk.W)
         self.tree.column("project", width=250, minwidth=160, stretch=False, anchor=tk.W)
-        self.tree.column("date", width=135, minwidth=100, stretch=False, anchor=tk.W)
-        self.tree.column("preview", width=950, minwidth=420, stretch=False, anchor=tk.W)
+        self.tree.column("date", width=165, minwidth=150, stretch=False, anchor=tk.W)
+        self.tree.column("messages", width=64, minwidth=56, stretch=False, anchor=tk.E)
+        self.tree.column("preview", width=856, minwidth=420, stretch=False, anchor=tk.W)
 
         vsb = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
         hsb = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
@@ -2020,7 +2066,7 @@ class SessionPortal:
         bar.pack(fill=tk.X, side=tk.BOTTOM)
         tk.Label(
             bar,
-            text="  Double-click or Enter to act  |  r refresh  |  q quit",
+            text="  Double-click or Enter to resume terminal chat session  |  r refresh  |  q quit",
             bg=self.bar,
             fg=self.text,
             font=("Consolas", 9),
@@ -2377,6 +2423,10 @@ class SessionPortal:
             pool = sorted(pool, key=lambda s: (s.get("display", "") or "").lower())
         elif sort == "Prompt Z-A":
             pool = sorted(pool, key=lambda s: (s.get("display", "") or "").lower(), reverse=True)
+        elif sort == "Msgs Low-High":
+            pool = sorted(pool, key=get_session_message_count)
+        elif sort == "Msgs High-Low":
+            pool = sorted(pool, key=get_session_message_count, reverse=True)
 
         self.filtered_sessions = pool
         self._refresh_list()
@@ -2404,6 +2454,7 @@ class SessionPortal:
             project_short = os.path.basename(project) or project
             ts = s.get("timestamp", 0)
             date_str = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d  %H:%M") if ts else ""
+            message_count = get_session_message_count(s)
             display = "    " + (display_title or "")[:90]
 
             if src == "grok":
@@ -2418,7 +2469,7 @@ class SessionPortal:
             model_label = session_model_label(s)
             check = "x" if s["sessionId"] in self._checked_ids else ""
             self.tree.insert("", tk.END, iid=s["sessionId"],
-                             values=(check, row_num, model_label, project_short, date_str, display),
+                             values=(check, row_num, model_label, project_short, date_str, message_count, display),
                              tags=tag)
 
     def _on_select(self, _event=None):
@@ -2660,6 +2711,30 @@ class SessionPortal:
             renames.pop(session["sessionId"], None)
         save_renames(renames)
         self._exit_delete_mode()
+        self._load_data()
+
+    def _delete_zero_message_sessions(self):
+        if self._delete_mode:
+            return
+        to_delete = [s for s in self.filtered_sessions if get_session_message_count(s) == 0]
+        n = len(to_delete)
+        if n == 0:
+            messagebox.showinfo("No empty sessions", "No sessions with 0 messages are shown in the current list.")
+            return
+        if not messagebox.askyesno(
+                "Clean empty sessions",
+                f"Permanently delete {n} shown session{'s' if n > 1 else ''} with 0 messages?\n\n"
+                "This uses the current search, provider, and date filters.\n"
+                "This cannot be undone.",
+                icon="warning"):
+            return
+        renames = load_renames()
+        for session in to_delete:
+            handler = DELETE_HANDLERS.get(session.get("_source", "claude"), delete_claude_session)
+            handler(session)
+            renames.pop(session["sessionId"], None)
+        save_renames(renames)
+        self._checked_ids = set()
         self._load_data()
 
 

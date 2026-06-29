@@ -36,11 +36,21 @@ Path examples in this README use `%USERPROFILE%` or placeholders such as `<your-
 C:\Users\<your-username>\session-portal
 ```
 
+Install dependencies and create a Desktop shortcut:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+After this, launch Session Portal from the Desktop shortcut named **Session Portal**.
+
+If you only want to install dependencies without creating a shortcut:
+
 ```powershell
 py -3 -m pip install -r .\Codebase\requirements.txt
 ```
 
-Optional: create a desktop shortcut for easier future launches:
+If you only want to recreate the Desktop shortcut:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
@@ -72,6 +82,12 @@ Use the no-console launcher:
 pyw .\Codebase\session_portal.pyw
 ```
 
+Or double-click:
+
+```text
+launch_session_portal.bat
+```
+
 Or run the main script:
 
 ```powershell
@@ -97,6 +113,7 @@ Each row in the table is one resumable session. The table shows:
 - `LLM`: harness plus recorded model, or harness plus `Unknown` when the session did not record a model
 - `Project`: folder name where the session was originally run
 - `Date`: last known session activity
+- `Msgs`: useful human message count found in the session
 - `Thread / Last Prompt`: generated title, thread name, or first useful prompt
 
 Click a row once to show details in the right inspector.
@@ -161,8 +178,9 @@ Long previews have their own scrollbar.
 ### Resume A Session
 
 1. Select a session row.
-2. Click **Resume Claude Code**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
-3. Session Portal opens a maximized terminal in the recorded working directory.
+2. Check the inspector on the right to confirm it is the session you want.
+3. Click the green resume button at the bottom right. The button label changes based on the selected provider, such as **Resume Claude Code**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
+4. Session Portal opens a maximized terminal in the recorded working directory and runs the provider's resume command.
 
 You can also double-click a row or press `Enter`.
 
@@ -171,11 +189,20 @@ If the recorded working directory no longer exists, the app falls back to the cu
 ### Rename A Session
 
 1. Select a row.
+2. Click **Rename** at the bottom of the inspector panel.
+3. Enter a new display name in the popup.
+4. Click **OK** to save it.
+
+The new name appears in the table's `Thread / Last Prompt` column and helps you recognize the session later.
+
+To remove a custom name:
+
+1. Select the renamed row.
 2. Click **Rename**.
-3. Enter a new display name.
+3. Clear the text box.
 4. Click **OK**.
 
-To remove a custom name, open **Rename**, clear the text, and confirm. The original title/prompt will show again.
+The original title or prompt will show again.
 
 Renames are saved locally in `Codebase/renames.json`. They do not modify the provider's original session file.
 
@@ -201,6 +228,17 @@ To delete multiple sessions:
 
 Press `Esc` or click **Cancel** to leave delete mode without deleting.
 
+### Clean Empty Sessions
+
+Use **Clean Empty Msgs** in the left sidebar to clear sessions that show `0` in the `Msgs` column.
+
+1. Apply any search, provider, or date filters you want.
+2. Click **Clean Empty Msgs**.
+3. Review the confirmation dialog.
+4. Confirm only if you want to permanently delete every currently shown session with `0` messages.
+
+The cleanup respects the current filters. For example, if the sidebar is filtered to **Claude Code**, it only targets shown Claude Code rows with `0` messages.
+
 ### Refresh And Auto Scan
 
 - **Refresh** manually reloads provider/session data.
@@ -224,8 +262,8 @@ Use **Auto Scan** when:
 
 ### Keyboard Shortcuts
 
-- `Enter`: resume the selected session
-- Double-click: resume the selected session
+- `Enter`: resume the selected terminal chat session
+- Double-click: resume the selected terminal chat session
 - `r`: refresh sessions
 - `q`: quit
 - `Esc`: cancel delete mode
@@ -239,12 +277,14 @@ Use **Auto Scan** when:
 - Filter by activity date range
 - Filter by All Models, Claude Code, Codex, Grok, or Copilot
 - Sort by newest, oldest, LLM name, project, or prompt/title
+- Show message counts in the `Msgs` column and sort by message count
 - Auto Scan refreshes supported provider/session discovery while the app is open
 - Preview session metadata plus first/last prompts
 - Scroll long inspector previews independently in the right panel
 - Resume sessions in their original working directory with the terminal opened maximized
 - Rename sessions locally
 - Delete selected sessions
+- Clean currently shown empty sessions after confirmation
 
 ## Local App Data
 

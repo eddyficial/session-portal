@@ -18,11 +18,21 @@ git clone https://github.com/eddyficial/session-portal.git
 cd session-portal
 ```
 
-Use the no-console launcher:
+Install dependencies and create a Desktop shortcut:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+After this, use the Desktop shortcut named **Session Portal** for future launches.
+
+Use the no-console launcher manually:
 
 ```powershell
 pyw .\Codebase\session_portal.pyw
 ```
+
+Or double-click `launch_session_portal.bat` from the repo folder.
 
 Double-clicking `session_portal.pyw` opens the Tkinter app directly without first opening a `cmd` or Windows Terminal tab.
 
@@ -32,7 +42,7 @@ If the UI dependency is missing:
 py -3 -m pip install -r .\Codebase\requirements.txt
 ```
 
-Optional desktop shortcut:
+Shortcut only:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install_desktop_shortcut.ps1
@@ -54,6 +64,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Project folders where sessions were originally run
 - Actual LLM names from session files when available
 - Row numbers for quick visual reference in the current filtered/sorted list
+- Message counts in the `Msgs` column
 - First and last human prompts
 - Token counts when the session files include usage data
 
@@ -67,6 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Toggle Auto Scan to keep supported session discovery fresh while the app is open
 - Reopen provider selection later with the Scan Sources button
 - Sort by date, LLM, project, or prompt/title from the sort menu or by clicking table headers
+- Sort by message count from the `Msgs` header or sort menu
 - Use the left provider sidebar, table-aligned search rail, wide numbered sessions table, and compact right inspector layout
 - The main workspace avoids a repeated page title; the search box prompts users to start typing to prefilter rows, `Threads` labels the table, and `Local AI Workspace` labels the sidebar subtitle.
 - Preview session metadata and prompts
@@ -76,6 +88,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 - Resume Copilot sessions with `gh copilot -- --resume=<session-id>`
 - Rename sessions locally
 - Delete selected sessions
+- Clean currently shown empty sessions with **Clean Empty Msgs** after confirmation
 
 ## Use Flow
 
@@ -90,6 +103,26 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_desktop_shortcut.ps1
 9. Use Rename to store a local display name in `Codebase/renames.json`.
 10. Use Delete to enter delete mode, select one or more rows, click Delete Selected, and confirm the warning dialog.
 11. Use Esc or Cancel to leave delete mode without deleting.
+12. Use **Clean Empty Msgs** to remove currently shown sessions with no useful human messages after confirmation.
+
+## Rename And Resume
+
+To rename a session:
+
+1. Select one row.
+2. Click **Rename** at the bottom of the inspector panel.
+3. Type the display name you want.
+4. Click **OK**.
+
+The rename is local to Session Portal and is saved in `Codebase/renames.json`. It does not edit the provider's original session file. To remove a custom rename, open **Rename**, clear the text box, and click **OK**.
+
+To resume a session:
+
+1. Select one row.
+2. Confirm the metadata in the right inspector.
+3. Click the green provider-specific resume button, such as **Resume Claude Code**, **Resume Codex**, **Resume Grok**, or **Resume Copilot**.
+
+The app opens a maximized terminal in the session's recorded working directory and runs the provider resume command. Double-clicking a row or pressing `Enter` also resumes the selected terminal chat session.
 
 Auto Scan refreshes provider/session discovery every 60 seconds by default. The sidebar toggle can turn it off when the user wants only manual Refresh behavior. Manual Refresh is used when the user wants new sessions, renamed rows, deleted rows, or changed provider choices to appear immediately.
 
@@ -98,6 +131,8 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - Main app: `Codebase/session_portal.py`
 - No-console launcher: `Codebase/session_portal.pyw`
 - Dependency file: `Codebase/requirements.txt`
+- One-step installer: `install.ps1`
+- Repo-folder launcher: `launch_session_portal.bat`
 - Codebase README: `Codebase/README.md`
 
 ## Local Files
@@ -116,6 +151,8 @@ Auto Scan refreshes provider/session discovery every 60 seconds by default. The 
 - The current UI uses CustomTkinter for the app frame, sidebar, search, filters, and sort controls while retaining the stable Tk table and preview internals.
 - Session table headings are explicitly aligned to their row columns.
 - The session table uses fixed readable column widths and a bottom horizontal scrollbar so long prompts can be read without hiding the LLM, Project, or Date columns.
+- The Date column is wide enough for the full `YYYY-MM-DD HH:MM` value.
+- The `Msgs` column shows useful human message counts and supports sorting.
 - The layout gives the session table the primary width and keeps the right inspector compact by default.
 - The top search area is aligned to the session-table width; date and sort controls sit in the compact inspector-side rail.
 - The session table uses a singular `LLM` column and shows actual recorded LLM names when available.

@@ -5,7 +5,7 @@ $appScript = Join-Path $repoRoot "Codebase\session_portal.pyw"
 $workingDirectory = Join-Path $repoRoot "Codebase"
 
 if (-not (Test-Path -LiteralPath $appScript)) {
-    throw "Could not find Session Portal launcher: $appScript"
+    throw "Could not find Session Portal launcher: $appScript. Run this script from the Session Portal repo folder."
 }
 
 $launcher = Get-Command pyw.exe -ErrorAction SilentlyContinue
@@ -31,3 +31,5 @@ $shortcut.Save()
 
 Write-Host "Created desktop shortcut:"
 Write-Host $shortcutPath
+Write-Host "Shortcut target:"
+Write-Host $appScript
