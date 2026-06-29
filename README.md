@@ -191,7 +191,7 @@ Opens a read-only transcript window so users can inspect a longer conversation b
 
 ![Session Portal resumed terminal](App/assets/session-portal-resume-terminal.png)
 
-Shows the expected resume behavior: Session Portal opens the matching CLI in the recorded working folder.
+Shows the expected resume behavior with Claude Code: Session Portal opens the matching CLI in the recorded working folder.
 
 These are the main UI states shown in the app screenshots:
 
