@@ -64,6 +64,7 @@ At the moment the app depends on:
 
 ```text
 customtkinter>=6.0.0
+Pillow>=11.0.0
 ```
 
 ### Install
