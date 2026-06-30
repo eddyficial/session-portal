@@ -188,6 +188,12 @@ Shows the same table narrowed to Claude Code. Provider filters make it easier to
 
 Opens a read-only Claude Code transcript window so users can inspect a longer conversation before resuming or exporting it.
 
+#### Export Thread
+
+![Session Portal export thread save dialog](App/assets/claude-code-flow-export-thread.png)
+
+Opens a save dialog so users can choose where to save the selected thread as a local Markdown transcript.
+
 #### Resume Terminal
 
 ![Session Portal resumed terminal](App/assets/claude-code-flow-resume-terminal.png)
