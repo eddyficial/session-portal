@@ -69,6 +69,32 @@ Pillow>=11.0.0
 
 ### Install
 
+#### Option 1: Release ZIP
+
+Use this if you just want to run the app.
+
+1. Open the latest release:
+   <https://github.com/eddyficial/session-portal/releases>
+2. Download `SessionPortal-v1.0.0.zip`.
+3. Extract the ZIP into a folder you want to keep, for example:
+
+```text
+C:\Users\<your-username>\SessionPortal
+```
+
+4. Open PowerShell in the extracted folder.
+5. Install dependencies and create a Desktop shortcut:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+After installation, launch **Session Portal** from the Desktop shortcut.
+
+#### Option 2: Git Clone
+
+Use this if you want to pull updates with Git or contribute code.
+
 Clone the repo:
 
 ```powershell
