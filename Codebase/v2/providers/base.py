@@ -20,7 +20,6 @@ from ..config import (
 )
 from ..models import Preview, ResumeCommand, Session, ThreadMessage
 
-
 # Per-session caps for the heavier full-content passes (search index + thread).
 MAX_INDEX_BYTES = 4 * 1024 * 1024      # search index: 4 MiB per session
 MAX_THREAD_CHARS = 200_000             # thread viewer: cap rendered text

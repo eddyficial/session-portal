@@ -7,12 +7,11 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 
-from ..config import GROK_EXE, GROK_SESSIONS_DIR
-from ..models import Preview, ResumeCommand, Session, ThreadMessage, Tokens
+from ..config import GROK_SESSIONS_DIR
+from ..models import Preview, ResumeCommand, Session, ThreadMessage
 from ..resume import find_grok_exe, ps_single_quote
 from .base import (
     MAX_INDEX_BYTES,
-    MAX_THREAD_CHARS,
     clip_preview_text,
     iter_jsonl_records,
     keep_thread_tail,

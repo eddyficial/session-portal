@@ -1,17 +1,15 @@
 """GitHub Copilot CLI session provider (ported faithfully from v1)."""
 from __future__ import annotations
 
-import json
 import shutil
 from datetime import datetime
 from pathlib import Path
 
 from ..config import COPILOT_SESSIONS_DIR
-from ..models import Preview, ResumeCommand, Session, ThreadMessage, Tokens
+from ..models import Preview, ResumeCommand, Session, ThreadMessage
 from ..resume import ps_single_quote
 from .base import (
     MAX_INDEX_BYTES,
-    MAX_THREAD_CHARS,
     clip_preview_text,
     iter_jsonl_records,
     keep_thread_tail,

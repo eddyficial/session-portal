@@ -30,7 +30,11 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r Codebase\requirements.txt pytest
+          python -m pip install -r Codebase\requirements.txt -r requirements-dev.txt
+
+      - name: Run lint
+        shell: pwsh
+        run: python -m ruff check .
 
       - name: Run tests
         shell: pwsh

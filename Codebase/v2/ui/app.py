@@ -20,16 +20,17 @@ from ..config import (
     APP_ICON,
     APP_ICON_PNG,
     APP_PALETTE,
-    PROVIDER_OPTIONS,
     PROVIDER_COLORS,
-    provider_detected,
+    PROVIDER_OPTIONS,
     provider_color,
+    provider_detected,
     provider_key_for_label,
     provider_label,
 )
 from ..logging_setup import get_logger
 from ..models import Session
-from ..pricing import session_cost as _session_cost, total_cost as _total_cost
+from ..pricing import session_cost as _session_cost
+from ..pricing import total_cost as _total_cost
 from ..providers.base import session_model_label
 from ..providers.registry import get_provider
 from ..resume import launch as launch_resume

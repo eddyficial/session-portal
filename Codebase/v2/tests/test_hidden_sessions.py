@@ -1,7 +1,7 @@
 """Local hide-list tests for server-backed providers such as AMP."""
 
-from Codebase.v2.models import Session
 from Codebase.v2 import sessions, storage
+from Codebase.v2.models import Session
 
 
 def test_load_sessions_filters_hidden_provider_ids(monkeypatch, tmp_path):

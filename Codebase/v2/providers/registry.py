@@ -5,9 +5,8 @@ to :data:`PROVIDERS`. Nothing else in the app changes.
 """
 from __future__ import annotations
 
-from ..config import provider_detected
-from .base import Provider
 from .amp import AmpProvider
+from .base import Provider
 from .claude import ClaudeProvider
 from .codex import CodexProvider
 from .copilot import CopilotProvider

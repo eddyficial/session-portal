@@ -5,11 +5,12 @@ import os
 import shutil
 import subprocess
 import tkinter as tk
-import customtkinter as ctk
-from urllib.parse import unquote
-from tkinter import ttk, messagebox, simpledialog
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timezone
+from tkinter import messagebox, simpledialog, ttk
+from urllib.parse import unquote
+
+import customtkinter as ctk
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 CLAUDE_DIR = Path.home() / ".claude"

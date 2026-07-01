@@ -7,7 +7,7 @@ cost awareness, not a billing source. A model is matched by substring against
 """
 from __future__ import annotations
 
-from .models import Session, Tokens
+from .models import Session
 
 # per-1M-token rates: (input, output, cache_read, cache_write)
 _RATES: list[tuple[str, float, float, float, float]] = [

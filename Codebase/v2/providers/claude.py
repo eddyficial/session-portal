@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 from ..config import (
@@ -15,7 +14,6 @@ from ..resume import find_claude_exe, ps_single_quote
 from .base import (
     MAX_INDEX_BYTES,
     MAX_METADATA_SCAN_BYTES,
-    MAX_THREAD_CHARS,
     clip_preview_text,
     iter_jsonl_records,
     keep_thread_tail,

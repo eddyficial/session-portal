@@ -14,6 +14,5 @@ if _REPO_ROOT not in sys.path:
 
 from Codebase.v2.main import main  # noqa: E402
 
-
 if __name__ == "__main__":
     main()

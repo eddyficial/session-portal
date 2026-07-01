@@ -47,6 +47,14 @@ Session Portal is local-first.
 
 Review the code before running it, especially because the app can resume and delete local session files.
 
+### Project Health
+
+- Releases: <https://github.com/eddyficial/session-portal/releases>
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+
 ### Requirements
 
 - Windows
@@ -76,14 +84,15 @@ Use this if you just want to run the app.
 1. Open the latest release:
    <https://github.com/eddyficial/session-portal/releases>
 2. Download `SessionPortal-v1.0.0.zip`.
-3. Extract the ZIP into a folder you want to keep, for example:
+3. Optional: download `SHA256SUMS.txt` from the same release if you want to verify the ZIP checksum.
+4. Extract the ZIP into a folder you want to keep, for example:
 
 ```text
 C:\Users\<your-username>\SessionPortal
 ```
 
-4. Open PowerShell in the extracted folder.
-5. Install dependencies and create a Desktop shortcut:
+5. Open PowerShell in the extracted folder.
+6. Install dependencies and create a Desktop shortcut:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -406,6 +415,12 @@ Run the same tests locally from the repo root:
 
 ```powershell
 py -3 -m pytest Codebase\v2\tests -q
+```
+
+Run lint locally:
+
+```powershell
+py -3 -m ruff check .
 ```
 
 The V2 app is organized into focused modules:

@@ -12,16 +12,18 @@ from ..config import (
 )
 from ..models import Preview, ResumeCommand, Session, ThreadMessage, Tokens
 from ..resume import find_codex_exe, ps_single_quote
+from . import base as provider_base
 from .base import (
-    MAX_INDEX_BYTES,
     MAX_METADATA_SCAN_BYTES,
-    MAX_THREAD_CHARS,
     clip_preview_text,
     iter_jsonl_records,
     keep_thread_tail,
     model_group_label,
     remember_first_last,
 )
+
+# Re-exported as a provider-level test hook for bounded-read regressions.
+MAX_INDEX_BYTES = provider_base.MAX_INDEX_BYTES
 
 
 class CodexProvider:

@@ -5,7 +5,6 @@ the on-disk behavior (rmtree for grok/copilot, unlink for claude/codex) is
 exercised without touching the user's real session folders.
 """
 import json
-from pathlib import Path
 
 from Codebase.v2.models import Session
 from Codebase.v2.providers import claude, codex, copilot, grok
@@ -99,7 +98,7 @@ def test_claude_delete_unlinks_file_and_filters_history(tmp_path, monkeypatch):
 
     assert not target.exists()
     assert other.exists()                       # sibling session file untouched
-    remaining = [json.loads(l) for l in history.read_text(encoding="utf-8").splitlines() if l.strip()]
+    remaining = [json.loads(line) for line in history.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert [r["sessionId"] for r in remaining] == ["11111111-1111-4111-8111-111111111111"]
 
 

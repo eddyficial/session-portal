@@ -12,7 +12,6 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 AUTO_FIX_LABEL = "auto-fix"
 OUTPUT_DIR = Path(".github") / "auto-fix"
 

@@ -1,6 +1,6 @@
 """Cost / token-rollup tests."""
-from Codebase.v2.models import Session, Tokens
 from Codebase.v2 import pricing, sessions
+from Codebase.v2.models import Session, Tokens
 
 
 def _session(model="claude-opus-4-1", tokens=None):
