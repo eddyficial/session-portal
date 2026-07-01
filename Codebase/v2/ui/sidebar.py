@@ -6,6 +6,7 @@ import tkinter as tk
 import customtkinter as ctk
 from PIL import Image
 
+from .. import __version__
 from ..config import APP_ICON_PNG
 from .tooltips import add_tooltip
 
@@ -44,6 +45,15 @@ def build_sidebar(app, parent):
     )
     subtitle.pack(anchor="center", fill=tk.X, padx=14, pady=(0, 20))
     add_tooltip(subtitle, "Select a saved session, inspect it, then resume it in its original working folder.")
+
+    version = ctk.CTkLabel(
+        sidebar,
+        text=f"v{__version__}",
+        text_color=app.muted,
+        font=app._font(-2),
+    )
+    version.pack(anchor="center", fill=tk.X, padx=14, pady=(0, 18))
+    add_tooltip(version, "Installed Session Portal app version.")
 
     app.source_buttons_frame = ctk.CTkFrame(sidebar, fg_color=app.bg_deep, corner_radius=0)
     app.source_buttons_frame.pack(fill=tk.X, padx=14)

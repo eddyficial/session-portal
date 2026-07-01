@@ -54,6 +54,7 @@ Review the code before running it, especially because the app can resume and del
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Security policy: [SECURITY.md](SECURITY.md)
+- CI: lint, tests, coverage XML, and packaged ZIP smoke test run on pushes and pull requests.
 
 ### Requirements
 
@@ -144,6 +145,8 @@ py -3 .\Codebase\session_portal.py
 The `.pyw` launcher is preferred for normal use because it starts the app without opening an extra console window.
 
 The Desktop shortcut uses the bundled Session Portal icon and app identity so Windows shows Session Portal in the taskbar instead of generic Python.
+
+The installed app version appears in the left sidebar.
 
 ### Update
 
@@ -422,6 +425,31 @@ Run lint locally:
 ```powershell
 py -3 -m ruff check .
 ```
+
+Run tests with coverage locally:
+
+```powershell
+py -3 -m pytest Codebase\v2\tests -q --cov=Codebase\v2 --cov-report=term-missing --cov-report=xml
+```
+
+The CI workflow also builds a release-style ZIP, extracts it into a fresh folder, runs the test suite from the extracted copy, compiles the package, and verifies the launcher imports. This catches missing package files before a release is published.
+
+### Release Process
+
+Maintainers can publish a package from GitHub Actions:
+
+1. Open **Actions**.
+2. Select **Package Release**.
+3. Click **Run workflow**.
+4. Enter a version such as `1.0.1`.
+5. Wait for the workflow to lint, test, build the ZIP, smoke-test the ZIP, create `SHA256SUMS.txt`, and publish the GitHub Release.
+
+The release workflow publishes:
+
+- `SessionPortal-v<version>.zip`
+- `SHA256SUMS.txt`
+
+For now, Session Portal ships as a tested portable ZIP plus installer scripts. A signed `.exe` or `.msi` installer is the next distribution step once code-signing and installer maintenance are worth the added complexity.
 
 The V2 app is organized into focused modules:
 

@@ -5,4 +5,4 @@ Same providers, same look, same resume commands — but providers are plugins
 behind a :class:`Provider` protocol and the UI never parses session files.
 """
 
-__version__ = "2.0.0"
+__version__ = "1.0.0"

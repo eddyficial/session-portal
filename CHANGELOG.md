@@ -14,6 +14,10 @@ This project uses public GitHub releases for packaged ZIP downloads.
 - Development dependency manifest.
 - Ruff lint configuration.
 - CI lint step.
+- CI coverage XML artifact.
+- CI packaged ZIP smoke test.
+- GitHub Actions release packaging workflow.
+- Visible app version in the sidebar.
 - Release checksum asset for the packaged ZIP.
 
 ## v1.0.0 - 2026-07-01
