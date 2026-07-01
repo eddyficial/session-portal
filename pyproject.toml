@@ -1,0 +1,28 @@
+[tool.pytest.ini_options]
+testpaths = ["Codebase/v2/tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["Codebase/v2"]
+omit = [
+  "Codebase/v2/tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+  ".git",
+  ".pytest_cache",
+  "__pycache__",
+  "Codebase/v2/.trash",
+  "Codebase/v2/audits",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]

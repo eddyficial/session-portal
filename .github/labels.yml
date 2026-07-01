@@ -1,0 +1,15 @@
+- name: auto-fix
+  color: "0E8A16"
+  description: "Allow the guarded automation workflow to open a draft fix PR for this issue."
+- name: bug
+  color: "d73a4a"
+  description: "Something is not working as intended."
+- name: enhancement
+  color: "a2eeef"
+  description: "New feature or improvement request."
+- name: docs
+  color: "0075ca"
+  description: "Documentation-only change."
+- name: needs-triage
+  color: "fbca04"
+  description: "Needs maintainer review before work starts."

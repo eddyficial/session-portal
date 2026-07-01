@@ -1,0 +1,94 @@
+name: Package Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without leading v, for example 1.0.1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  package-release:
+    name: Build and publish release package
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r Codebase\requirements.txt -r requirements-dev.txt
+
+      - name: Verify package source
+        shell: pwsh
+        run: |
+          python -m ruff check .
+          python -m pytest Codebase\v2\tests -q
+          python -m compileall Codebase\v2 -q
+
+      - name: Build package ZIP and checksum
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          $tag = "v$version"
+          $zipName = "SessionPortal-$tag.zip"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          git archive --format=zip --prefix="SessionPortal-$tag/" -o "dist\$zipName" HEAD README.md LICENSE SECURITY.md install.ps1 install_desktop_shortcut.ps1 uninstall_desktop_shortcut.ps1 launch_session_portal.bat App Codebase
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath "dist\$zipName").Hash.ToLowerInvariant()
+          [System.IO.File]::WriteAllText("dist\SHA256SUMS.txt", "$hash  $zipName`n", [System.Text.UTF8Encoding]::new($false))
+
+      - name: Smoke test package ZIP
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          $tag = "v$version"
+          $zipName = "SessionPortal-$tag.zip"
+          $extractRoot = Join-Path $env:RUNNER_TEMP "session-portal-release-smoke"
+          if (Test-Path $extractRoot) {
+            Remove-Item -LiteralPath $extractRoot -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $extractRoot | Out-Null
+          Expand-Archive -LiteralPath "dist\$zipName" -DestinationPath $extractRoot -Force
+          Push-Location (Join-Path $extractRoot "SessionPortal-$tag")
+          try {
+            python -m pytest Codebase\v2\tests -q
+            python -m compileall Codebase\v2 -q
+            python -c "from Codebase.v2.main import main; from Codebase.v2.providers.registry import PROVIDERS; print('release smoke ok', len(PROVIDERS))"
+          } finally {
+            Pop-Location
+          }
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ inputs.version }}"
+          $tag = "v$version"
+          $zipName = "SessionPortal-$tag.zip"
+          $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          $notes = @(
+            "Session Portal $tag packaged release.",
+            "",
+            "Download ``$zipName``, extract it, then run:",
+            "",
+            "``````powershell",
+            "powershell -ExecutionPolicy Bypass -File .\install.ps1",
+            "``````",
+            "",
+            "This package was built by GitHub Actions and smoke-tested from the ZIP artifact before publishing."
+          ) -join "`n"
+          [System.IO.File]::WriteAllText($notesPath, $notes, [System.Text.UTF8Encoding]::new($false))
+          gh release create $tag "dist\$zipName" "dist\SHA256SUMS.txt" --target "${{ github.sha }}" --title "Session Portal $tag" --notes-file $notesPath

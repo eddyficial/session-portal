@@ -1,0 +1,22 @@
+Codebase/settings.json
+Codebase/renames.json
+Codebase/v2/settings.json
+Codebase/v2/renames.json
+Codebase/v2/hidden_sessions.json
+Codebase/v2/audits/
+Codebase/v2/.trash/
+Codebase/v2/*.log
+Codebase/v2/*.log.*
+Codebase/__pycache__/
+__pycache__/
+*.py[cod]
+Reviewer Report.md
+QA.md
+Functional Test Report.md
+Coverage.md
+Defect Handoff.md
+.red-lens-hunt/
+dist/
+htmlcov/
+.coverage
+coverage.xml
