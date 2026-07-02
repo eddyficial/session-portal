@@ -68,5 +68,5 @@ class Session:
     source_file: Optional[str] = None   # primary file for preview/delete
     session_dir: Optional[str] = None    # grok/copilot directory for rmtree
     message_count: Optional[int] = None  # cached count, lazily computed
-    search_blob: str = ""                # lowercased full-content index (lazy)
+    search_blob: str = ""                # lowercased full-content index (lazy + persistent)
     tokens: Optional["Tokens"] = None    # cached preview tokens (lazy, for cost)

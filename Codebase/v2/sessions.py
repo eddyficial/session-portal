@@ -10,6 +10,7 @@ from .logging_setup import get_logger
 from .models import Preview, Session
 from .providers.base import session_model_label
 from .providers.registry import PROVIDERS, get_provider
+from .search_index import hydrate_sessions, prune_to_sessions, save_session
 from .storage import load_hidden_sessions, load_renames, load_settings
 
 logger = get_logger(__name__)
@@ -37,6 +38,8 @@ def load_sessions(settings: dict | None = None) -> list[Session]:
 
     sessions = [s for s in sessions if s.resumable and s.id not in hidden.get(s.provider, set())]
     sessions.sort(key=lambda s: s.timestamp, reverse=True)
+    hydrate_sessions(sessions)
+    prune_to_sessions(sessions)
     return sessions
 
 
@@ -93,6 +96,7 @@ def ensure_search_index(sessions: list[Session]) -> int:
         # the same path, and so a session with no extractable messages still
         # matches project/title searches.
         s.search_blob = f"{(s.project or '').lower()} \n {(s.display or '').lower()} \n {blob}"
+        save_session(s)
         built += 1
     return built
 

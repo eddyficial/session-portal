@@ -7,6 +7,8 @@ Codebase/v2/audits/
 Codebase/v2/.trash/
 Codebase/v2/*.log
 Codebase/v2/*.log.*
+Codebase/v2/*.sqlite3
+Codebase/v2/*.sqlite3-*
 Codebase/__pycache__/
 __pycache__/
 *.py[cod]

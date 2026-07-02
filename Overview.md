@@ -154,6 +154,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipDependencies
 - GitHub automation guardrails were added on 2026-06-29. The repo now has bug/feature issue templates, a label manifest including `auto-fix`, and a guarded auto-fix workflow that only runs on explicitly labeled issues or manual dispatch. The workflow creates `auto/issue-<number>`, writes a sanitized handoff under `.github/auto-fix/`, runs tests, and opens a draft PR for human review instead of pushing directly to `main`.
 - Public screenshot guidance was added on 2026-06-29. Shared screenshots should use generic sample projects, prompts, paths, and session IDs while explaining the app states: all-models view, provider filters, search/date controls, session table, inspector, tooltips, thread viewer, export, and resume.
 - Sanitized public screenshots now live under `App/assets/` and use synthetic demo data only.
+- Persistent search indexing was added on 2026-07-01. `Codebase/v2/search_index.py` stores lowercased search blobs in local SQLite at `Codebase/v2/session_index.sqlite3`, hydrates unchanged sessions on later launches, invalidates rows when source file size or mtime changes, and prunes rows for sessions no longer visible. The SQLite file is local runtime data and ignored by git.
 
 ### Operating Rule
 

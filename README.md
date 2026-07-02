@@ -42,7 +42,7 @@ Session Portal is local-first.
 - No API service is required.
 - No background server is started.
 - Session data is read from the current user's local workspace.
-- Exported threads, local settings, rename files, logs, and trash data are ignored by git.
+- Exported threads, local settings, rename files, logs, the local search index, and trash data are ignored by git.
 - Resume actions open local terminal commands for the selected provider.
 
 Review the code before running it, especially because the app can resume and delete local session files.
@@ -257,6 +257,13 @@ These are the main UI states shown in the app screenshots:
 
 Use the search box to filter by project, title, or prompt text.
 
+Search uses a local persistent index. On first search, Session Portal reads the
+needed session text, stores a lowercased search cache in
+`Codebase/v2/session_index.sqlite3`, and reuses that cache on later launches.
+If a provider session file changes, the app detects the changed size or
+modified time and rebuilds that session's index row. The index stays on your
+computer and is ignored by git.
+
 Use **Dates** to select a calendar date range. Leave either side as **Any** for an open-ended range.
 
 Use the left sidebar to filter by provider:
@@ -410,7 +417,7 @@ The public test suite covers:
 - Delete, Trash, and restore safety
 - Hidden session handling for providers such as AMP
 - Thread viewing and transcript export
-- Search index behavior
+- Persistent search index behavior
 - Cost calculation helpers
 - Inspector formatting
 

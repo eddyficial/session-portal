@@ -47,6 +47,7 @@ ASSETS_DIR = _V2_DIR / "assets"
 APP_ICON = ASSETS_DIR / "session_portal.ico"
 APP_ICON_PNG = ASSETS_DIR / "logo_256.png"
 LOG_FILE = _V2_DIR / "session_portal.log"
+SEARCH_INDEX_FILE = _V2_DIR / "session_index.sqlite3"
 APP_USER_MODEL_ID = "SessionPortal.LocalAIWorkspace"
 
 # ── Bounded-read safety constants ───────────────────────────────────────────
